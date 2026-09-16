@@ -67,10 +67,10 @@ Python **3.12** with the pinned dependencies:
 python -m pip install -r requirements.txt
 ```
 
-> On the development machine a bare `python` resolves to a miniforge base that
-> lacks these packages and dies at `import yaml`. Use the standalone 3.12 install
-> (`C:/Users/imana/AppData/Local/Programs/Python/Python312/python.exe`) or a fresh
-> virtual environment.
+> If you have several Pythons (Anaconda or Miniforge alongside python.org), a bare
+> `python` may be one without these packages and fail at `import yaml`. On Windows,
+> `py -3.12` picks the right one — use it for both the install and every command
+> (`py -3.12 main.py all --tile 6204_105`) — or work in a fresh virtual environment.
 
 ### 2. roofer
 
