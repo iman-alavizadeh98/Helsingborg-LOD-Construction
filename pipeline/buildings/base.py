@@ -1,8 +1,19 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """
 Base pipeline class for all data processing pipelines.
 
 Provides abstract interface that all dataset pipelines inherit from.
 Ensures consistent structure across different data workflows.
+
+``run()`` drives the four abstract stages in order — load, validate, preprocess,
+export — and returns a summary dict rather than raising, so a failure is reported
+in the caller's exit code instead of a traceback. :class:`~.pipeline.BuildingsPipeline`
+is the only implementation today.
 """
 
 from abc import ABC, abstractmethod

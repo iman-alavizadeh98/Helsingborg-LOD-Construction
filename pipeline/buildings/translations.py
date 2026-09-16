@@ -1,11 +1,33 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """
-Buildings dataset configuration and translations.
+Buildings dataset lookup tables (Swedish → English).
 
 Contains:
 - Field name translations (Swedish → English)
 - Building type classifications
 - Purpose/usage category mappings
+- Collection-level (positional provenance) mappings
 - Dataset metadata
+
+Constants only — no I/O, no configuration loading. The project's YAML config
+loader is ``pipeline/config.py``; this module was once also called ``config.py``
+and the collision was a standing source of confusion.
+
+All keys are the *raw Swedish values as they appear in the source GeoPackage*.
+Two traps are baked into that data and the lookups below are shaped around them:
+
+* ``andamal1`` is compound, ``"<Type>;<Purpose>"`` — e.g.
+  ``"Bostad;Småhus friliggande"``, and often type-only with a trailing semicolon
+  (``"Komplementbyggnad;"``). ``PRIMARY_PURPOSES`` is keyed on the *purpose half
+  alone*, so callers must split before looking up. ``pipeline.translate_purpose``
+  does this.
+* ``insamlingslage`` arrives capitalised (``"Fasad"``) while ``COLLECTION_LEVELS``
+  is keyed lowercase, so lookups must casefold.
 """
 
 # === FIELD NAME TRANSLATIONS (Swedish → English) ===
@@ -43,48 +65,70 @@ FIELD_TRANSLATIONS = {
 }
 
 # === BUILDING OBJECT TYPES ===
-# Values for objekttyp field (Table 4 in PDF)
+# Values for the objekttyp field (Table 4 in the product description).
+#
+# `category` is the coarse bucket also used by PRIMARY_PURPOSES below. It exists
+# so that a compound andamal1 value carrying no purpose half — "Komplementbyggnad;"
+# and friends, 64% of the Helsingborg extract — can still be categorised from its
+# type half instead of falling through to "Other".
 
 BUILDING_TYPES = {
     "Bostad": {
         "en": "Residence",
+        "category": "Residence",
         "description": "Building used for residential purposes (single/multi-family, >15 kvm)",
         "object_type_nr": 2061
     },
     "Industri": {
         "en": "Industrial",
+        "category": "Industrial",
         "description": "Building containing manufacturing or processing of products (>15 kvm)",
         "object_type_nr": 2062
     },
     "Samhällsfunktion": {
         "en": "Public facility",
+        "category": "Public",
         "description": "Building for public community services (>15 kvm)",
         "object_type_nr": 2063
     },
     "Verksamhet": {
         "en": "Business",
+        "category": "Business",
         "description": "Building used primarily for business (>50% non-residential, >15 kvm)",
         "object_type_nr": 2064
     },
     "Ekonomibyggnad": {
         "en": "Farm building",
+        "category": "Farm",
         "description": "Building for agriculture/forestry/similar activities (>15 kvm)",
         "object_type_nr": 2065
     },
     "Komplementbyggnad": {
         "en": "Ancillary building",
+        "category": "Ancillary",
         "description": "Small building attached to dwelling (garage, shed, etc., >15 kvm)",
         "object_type_nr": 2066
     },
     "Övrig byggnad": {
         "en": "Other building",
+        "category": "Other",
         "description": "Building with other purpose (colonist hut, shelter, tower, etc., >15 kvm)",
         "object_type_nr": 2067
     },
 }
 
 # === PRIMARY PURPOSE (ANDAMÅL1) CATEGORIES ===
-# From Table 6 in PDF - comprehensive list
+# From Table 6 in the product description.
+#
+# Keyed on the *purpose half only*. The raw column holds "<Type>;<Purpose>", so a
+# direct lookup against the raw value never matches — that was a real bug: every
+# row in the Helsingborg extract came out untranslated and categorised "Other".
+# Split first; `pipeline.translate_purpose` is the supported way in.
+#
+# Not exhaustive. Table 6 lists more purposes than appear in this region, and the
+# Verksamhet / Ekonomibyggnad / Komplementbyggnad / Övrig byggnad types have no
+# purpose entries at all — which is exactly why the BUILDING_TYPES fallback above
+# matters rather than being a nicety.
 
 PRIMARY_PURPOSES = {
     # Bostad (Residence)
@@ -124,7 +168,15 @@ PRIMARY_PURPOSES = {
 }
 
 # === COLLECTION LEVEL (INSAMLINGSLAGE) ===
-# Table 7 in PDF - how building location was determined
+# Table 7 in the product description — how the building outline was determined.
+#
+# This matters more than it looks for LOD2.2. "Fasad" means the outline was
+# measured at the facade, *inside* the roof edge, so those polygons need the
+# roofprint buffer that Phase 1 calibrates; "Takkant" polygons are already at the
+# roof edge and need little or none.
+#
+# Keys are lowercase; the source data is capitalised ("Fasad"). Look up with
+# .casefold() — a direct lookup silently no-ops, which it did until this was fixed.
 
 COLLECTION_LEVELS = {
     "fasad": {

@@ -1,15 +1,35 @@
-"""
-Post-processing utilities for the buildings pipeline.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
 
-Creates an optional postprocess snapshot by removing exact duplicates
-and keeping the newest record per object_id.
+"""
+Post-processing for the buildings pipeline — one row per building.
+
+The national Byggnad extract is versioned: the same ``object_id`` can appear
+several times, once per revision. Reconstruction needs exactly one polygon per
+building, so this collapses the history to the newest row per id.
+
+Called from :meth:`BuildingsPipeline.export`, not separately. Its output —
+``buildings_processed_postprocess.gpkg``, layer ``buildings_postprocess`` — is
+what ``config.yml`` names as ``paths.footprints``, so it is a required part of
+the run rather than an optional extra.
 """
 
 from pathlib import Path
 from typing import Dict, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import geopandas as gpd
+
+# Output filenames, bound once. They are referenced from three places below —
+# the written files, the report body, and the Markdown — and a literal repeated
+# in all three drifts silently.
+SNAPSHOT_GPKG = "buildings_processed_postprocess.gpkg"
+SNAPSHOT_LAYER = "buildings_postprocess"
+REPORT_JSON = "buildings_postprocess_report.json"
+REPORT_MD = "buildings_postprocess_report.md"
 
 
 def build_postprocess_snapshot(
@@ -56,11 +76,12 @@ def build_postprocess_snapshot(
 
     rows_removed_for_postprocess = int(len(deduped)) - int(len(latest))
 
-    output_gpkg = output_dir / "buildings_processed_postprocess.gpkg"
-    latest.to_file(output_gpkg, layer="buildings_postprocess")
+    output_gpkg = output_dir / SNAPSHOT_GPKG
+    latest.to_file(output_gpkg, layer=SNAPSHOT_LAYER)
 
     report = {
-        "timestamp_utc": datetime.utcnow().isoformat() + "Z",
+        # Timezone-aware: datetime.utcnow() is deprecated from Python 3.12.
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "rules": [
             "Removed exact duplicate rows.",
             "Kept the newest record per object_id based on version_valid_from and object_version (if available)."
@@ -75,17 +96,18 @@ def build_postprocess_snapshot(
         "version_number_column": version_num_col if version_num_col in deduped.columns else None,
         "sort_columns": sort_cols,
         "output_files": {
-            "gpkg": output_gpkg.name,
-            "report_json": "buildings_postprocess_report.json",
-            "report_md": "buildings_postprocess_report.md"
+            "gpkg": SNAPSHOT_GPKG,
+            "layer": SNAPSHOT_LAYER,
+            "report_json": REPORT_JSON,
+            "report_md": REPORT_MD,
         }
     }
 
-    report_json = output_dir / "buildings_postprocess_report.json"
+    report_json = output_dir / REPORT_JSON
     with open(report_json, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=True)
 
-    report_md = output_dir / "buildings_postprocess_report.md"
+    report_md = output_dir / REPORT_MD
     report_lines = [
         "# Buildings Postprocess Report",
         "",
