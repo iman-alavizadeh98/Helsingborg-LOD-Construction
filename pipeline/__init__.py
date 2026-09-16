@@ -6,7 +6,7 @@
 
 """LOD2.2 building reconstruction pipeline for Helsingborg.
 
-Stages follow PROJECT_PLAN.md:
+Stages follow docs/PROJECT_PLAN.md:
 
 * ``dtm``        — 1.1 ground raster
 * ``recover``    — 1.2 overlap-class recovery

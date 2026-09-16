@@ -3,7 +3,7 @@
 Student research project, open source, GPL-3.0. Airborne LiDAR + cadastral
 footprints → LOD2.2 building models as CityJSON.
 
-Full specification: @PROJECT_PLAN.md — read it before starting new work.
+Full specification: @docs/PROJECT_PLAN.md — read it before starting new work.
 
 ## Standing rules
 
@@ -29,7 +29,7 @@ Full specification: @PROJECT_PLAN.md — read it before starting new work.
 - Point density ~50 pts/m². Roofer defaults are tuned for lower-density Dutch
   AHN data — expect to retune plane-detection thresholds.
 - Footprints are ground outlines; roofer wants roofprints. Buffer outward by
-  the calibrated offset (see PROJECT_PLAN §1.3) before use.
+  the calibrated offset (see docs/PROJECT_PLAN.md §1.3) before use.
 - Terraced rows are the known failure mode. Always use real cadastral
   footprints rather than outlines derived from the point cloud.
 
@@ -44,28 +44,38 @@ out/           # CityJSON, reports (gitignored)
 
 ## Commands
 
-All stages are driven by `config.yml`; paths in it resolve against its own
-directory, so these work from anywhere.
+Everything goes through `main.py`. All stages are driven by `config.yml`; paths
+in it resolve against its own directory, so these work from anywhere.
 
 ```bash
-# prepare a tile (Phase 1: DTM, point recovery, offset calibration, outputs)
-python -m pipeline.prepare_tile --tile 6204_105
+# the usual command — prepare, reconstruct, inspect; stops at the first failure
+python main.py all --tile 6204_105
 
-# run roofer (Phase 2) — --dry-run writes the TOML and prints the command only
-python -m pipeline.run_roofer --tile 6204_105
-
-# inspect the result: LoDs, semantic surfaces, roof forms, volume/height stats
-python -m pipeline.inspect_cityjson --tile 6204_105
+# or one stage at a time
+python main.py prepare --tile 6204_105   # Phase 1: DTM, point recovery, roofprints
+python main.py roofer  --tile 6204_105   # Phase 2 — --dry-run writes the TOML only
+python main.py inspect --tile 6204_105   # LoDs, semantic surfaces, roof forms, stats
 
 # omit --tile to process every tile listed in config.yml
+
+# regenerate the cadastral footprints from the raw national Byggnad extract.
+# Not part of `all`; the raw input is not in this repository.
+python main.py footprints --input path/to/byggnad_sverige.gpkg --output data
 ```
 
-Build the roofer image once (the source tarball in `roofer-1.0.0/`):
+Each stage also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`);
+`main.py` dispatches to those rather than reimplementing them.
+
+Install roofer from the official 1.0.0 build — it is not vendored, and nothing
+needs compiling:
 
 ```bash
-docker build -f roofer-1.0.0/docker/Dockerfile --build-arg JOBS=10 \
-  -t roofer:1.0.0 roofer-1.0.0
+docker pull 3dgi/roofer:v1.0.0
 ```
+
+Or use a native binary (no Docker) from the `v1.0.0` release assets and set
+`runner: native` in `config.yml`. The `roofer-1.0.0/` source tarball is kept
+locally, gitignored, only as the citable source for the claims below.
 
 Outputs land in `out/work/<tile>/` (prepared LAS, roofprints, DTM, roofer TOML),
 `out/roofer/<tile>/` (CityJSON) and `out/qa/` (QA record per tile).

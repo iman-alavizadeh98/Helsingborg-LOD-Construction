@@ -13,7 +13,7 @@ Consumes the Phase 1 outputs (``<tile>_prepared.las`` and
 result in the tile's QA report.
 
 roofer is run as a separate process and only its CityJSON is consumed, so its
-GPL-3.0 licence imposes no obligation on this code (PROJECT_PLAN §2).
+GPL-3.0 licence imposes no obligation on this code (docs/PROJECT_PLAN.md §2).
 
 **Why the prepared LAS matters.** ``src/extra/io/StreamCropper.cpp`` keeps a
 point only when its classification equals ``building_class`` or
@@ -117,7 +117,7 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
         cmd = [
             "docker", "run", "--rm",
             "-v", f"{cfg.root}:{container_root}",
-            str(rcfg.get("image", "roofer:1.0.0")),
+            str(rcfg.get("image", "3dgi/roofer:v1.0.0")),
             "--config", _toml_path(cfg.root, toml_path, container_root),
         ]
     else:

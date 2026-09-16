@@ -7,7 +7,7 @@
 > **Do not modify the Python prototype in `qa/`.** It is the validation
 > harness, not a deliverable.
 
-and `PROJECT_PLAN.md` §3.2 relies on it:
+and `docs/PROJECT_PLAN.md` §3.2 relies on it:
 
 > The existing Python prototype already produces plane count, tilt and mean
 > height per plane; **keep it as the QA harness.** It is an independent
