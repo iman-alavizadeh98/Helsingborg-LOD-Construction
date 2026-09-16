@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 # Stage entry points. Each is a `main(argv) -> int` following the same
 # convention, so this module dispatches rather than reimplementing anything.
@@ -61,6 +62,13 @@ def run_footprints(args: argparse.Namespace) -> int:
     # Imported here rather than at module scope: this stage is the only one that
     # needs the buildings package, and a normal run should not pay for it.
     from pipeline.buildings import BuildingsPipeline
+
+    # Check the input up front. BasePipeline.run() catches everything and logs a
+    # traceback, which is the right behaviour mid-run but poor for a mistyped
+    # path — by far the most likely way this stage is invoked wrongly.
+    if not Path(args.input).is_file():
+        print(f"input GeoPackage not found: {args.input}", file=sys.stderr)
+        return 2
 
     cfg = {
         "input_gpkg": args.input,
