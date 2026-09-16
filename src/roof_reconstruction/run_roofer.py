@@ -31,15 +31,8 @@ import sys
 from pathlib import Path
 
 from pipeline_common.config import Config, load_config
+from pipeline_common.containers import container_path, tool_command
 from pipeline_common.qa_record import TileQA
-
-
-def _toml_path(root: Path, path: Path, container_root: str | None) -> str:
-    """Render a path for the TOML, rebased into the container when needed."""
-    if container_root is None:
-        return str(path).replace("\\", "/")
-    rel = path.resolve().relative_to(root.resolve())
-    return f"{container_root.rstrip('/')}/{rel.as_posix()}"
 
 
 def build_toml(cfg: Config, tile_id: str, container_root: str | None) -> str:
@@ -51,9 +44,9 @@ def build_toml(cfg: Config, tile_id: str, container_root: str | None) -> str:
     out_dir = cfg.out_dir / "roofer" / tile_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    gpkg = _toml_path(root, work / f"{tile_id}_roofprints.gpkg", container_root)
-    las = _toml_path(root, work / f"{tile_id}_prepared.las", container_root)
-    out = _toml_path(root, out_dir, container_root)
+    gpkg = container_path(root, work / f"{tile_id}_roofprints.gpkg", container_root)
+    las = container_path(root, work / f"{tile_id}_prepared.las", container_root)
+    out = container_path(root, out_dir, container_root)
 
     lines = [
         f'polygon-source = "{gpkg}"',
@@ -108,23 +101,17 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
                 f"--tile {tile_id}' first"
             )
 
-    container_root = rcfg.get("container_root", "/work") if runner == "docker" else None
+    prefix, container_root = tool_command(
+        runner,
+        root=cfg.root,
+        image=str(rcfg.get("image", "3dgi/roofer:v1.0.0")),
+        binary=str(rcfg.get("binary", "roofer")),
+        container_root=str(rcfg.get("container_root", "/work")),
+    )
     toml_text = build_toml(cfg, tile_id, container_root)
     toml_path = work / f"{tile_id}_roofer.toml"
     toml_path.write_text(toml_text, encoding="utf-8")
-
-    if runner == "docker":
-        cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{cfg.root}:{container_root}",
-            str(rcfg.get("image", "3dgi/roofer:v1.0.0")),
-            "--config", _toml_path(cfg.root, toml_path, container_root),
-        ]
-    else:
-        binary = str(rcfg.get("binary", "roofer"))
-        if shutil.which(binary) is None:
-            raise FileNotFoundError(f"roofer binary '{binary}' not found on PATH")
-        cmd = [binary, "--config", str(toml_path)]
+    cmd = prefix + ["--config", container_path(cfg.root, toml_path, container_root)]
 
     qa = TileQA(tile_id, cfg.qa_dir, config={"roofer": rcfg})
     rec = qa.stage("2-roofer")

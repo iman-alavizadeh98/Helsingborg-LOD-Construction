@@ -1,8 +1,9 @@
 # LOD2.2 Building Reconstruction — Helsingborg
 
 Airborne LiDAR plus cadastral footprints in, semantically-structured 3D building
-models out, as **CityJSON at LOD2.2**: one solid per building, differentiated roof
-shapes, and RoofSurface / WallSurface / GroundSurface separated.
+models out at **LOD2.2**: one solid per building, differentiated roof shapes, and
+RoofSurface / WallSurface / GroundSurface separated — delivered as **CityJSON,
+CityGML, glTF and PLY**.
 
 Author: **Iman Alavi Zadeh** — developed with AI-assisted (agentic) programming.
 Licensed under **GPL-3.0-or-later**; see [LICENSE](LICENSE) and
@@ -12,11 +13,37 @@ Licensed under **GPL-3.0-or-later**; see [LICENSE](LICENSE) and
 
 ## What it produces
 
-For each tile, in `out/`:
+For each tile, the building models in `out/export/<tile>/`:
+
+| File | Format | Use it for |
+|---|---|---|
+| `<tile>.city.json` | CityJSON 2.0 | GIS and 3D city tools; ninja.cityjson.org, QGIS, FME |
+| `<tile>.city.gml` | CityGML 2.0 (or 3.0) | 3D city platforms and national profiles that expect OGC CityGML |
+| `<tile>.glb` | glTF 2.0, binary | Viewers, web, Blender, game engines — one selectable object per building |
+| `<tile>.ply` | PLY, binary | Analysis tools — CloudCompare, MeshLab, Open3D |
+
+All four are converted from the one reconstruction, so they carry identical
+geometry. They differ in what else they keep:
+
+| | Semantics (roof/wall/ground) | Building attributes | Coordinates |
+|---|---|---|---|
+| CityJSON | yes | yes | real-world EPSG:3008 |
+| CityGML | yes | yes | real-world EPSG:3008 |
+| glTF | as materials | in each node's `extras` | **recentred** — see below |
+| PLY | `semantic` face property + colour | building id only | real-world EPSG:3008, double |
+
+**glTF coordinates.** glTF stores positions as 32-bit floats, which at Swedish grid
+coordinates (6.2 million metres) resolve only about half a metre. The `.glb` is
+therefore written relative to a whole-metre origin near the tile centre, and Y-up as
+glTF requires. The origin is stored in the file under
+`extras.georeference.origin_epsg3008`; to get real-world coordinates back, map glTF
+`(x, y, z)` to `(x, −z, y)` and add the origin. Verified to round-trip within 0.01 mm.
+
+Everything else, also per tile, in `out/`:
 
 | File | What it is |
 |---|---|
-| `roofer/<tile>/*.city.jsonl` | The deliverable — LOD2.2 CityJSONSequence |
+| `roofer/<tile>/*.city.jsonl` | roofer's raw output, a CityJSON sequence — the source of every export |
 | `work/<tile>/<tile>_prepared.las` | Cleaned cloud: ground + recovered roof points |
 | `work/<tile>/<tile>_roofprints.gpkg` | Footprints buffered out to the roof edge |
 | `work/<tile>/<tile>_dtm.tif` | Gap-filled terrain raster, 0.5 m |
@@ -67,7 +94,20 @@ docker pull 3dgi/roofer:v1.0.0
 Extract it, put its `bin/` directory on `PATH`, then set `runner: native` in
 `config.yml`.
 
-### 3. Data
+### 3. citygml-tools (only for CityGML export)
+
+The CityGML file is produced by citygml-tools, the reference CityJSON ↔ CityGML
+converter. Like roofer it is not bundled; with Docker it is one command:
+
+```bash
+docker pull citygml4j/citygml-tools:2.5.0
+```
+
+Without Docker, install it natively (it needs Java) and set
+`export.citygml.runner: native`. If you don't need CityGML, remove `citygml` from
+`export.formats` in `config.yml` and neither is required.
+
+### 4. Data
 
 Two inputs, neither checked into this repository:
 
@@ -87,13 +127,17 @@ Everything goes through `main.py`. Paths inside `config.yml` resolve against its
 directory, so these work from anywhere.
 
 ```bash
-# the usual command — prepare, reconstruct, inspect
+# the usual command — prepare, reconstruct, export, inspect
 python main.py all --tile 6204_105
 
 # or one stage at a time
 python main.py prepare --tile 6204_105   # DTM, point recovery, roofprints
 python main.py roofer  --tile 6204_105   # reconstruct
+python main.py export  --tile 6204_105   # CityJSON, CityGML, glTF, PLY
 python main.py inspect --tile 6204_105   # LoDs, roof forms, volume/height stats
+
+# choose formats for one run (default: export.formats in config.yml)
+python main.py export --tile 6204_105 --format gltf ply
 
 # omit --tile to process every tile in config.yml
 # add --dry-run to the roofer stage to see the command and TOML without running
@@ -106,8 +150,9 @@ occasional job — it is not part of `all`:
 python main.py footprints --input path/to/byggnad_sverige.gpkg --output data
 ```
 
-View the result by dropping a `.city.jsonl` file into
-[ninja.cityjson.org](https://ninja.cityjson.org), or open it in QGIS.
+To look at the result quickly, drop `out/export/<tile>/<tile>.city.json` into
+[ninja.cityjson.org](https://ninja.cityjson.org), or the `.glb` into any glTF
+viewer.
 
 ---
 
@@ -134,6 +179,12 @@ research background and the reasoning behind each decision is in
 
 **Phase 2 — reconstruction** generates a roofer TOML and runs roofer.
 
+**Export** converts roofer's output to CityJSON, CityGML, glTF and PLY. Nothing is
+re-fitted or simplified. For the mesh formats, each planar face is triangulated by
+ear clipping, which adds no vertices, so every mesh stays watertight wherever
+roofer's solid is; on the reference tile 60 of 61 are, and the exception is open in
+roofer's own output.
+
 **Phase 3 — inspection** reports LoDs, semantic surfaces, roof forms, and volume
 and height distributions.
 
@@ -156,6 +207,12 @@ Every stage writes a QA record — counts in, counts out, failures with reasons.
   categorised `Other`). The code is fixed; regenerating the file needs the raw
   Lantmäteriet *Byggnad* extract. Geometry is unaffected, so reconstruction output
   is unchanged — only those two attribute columns.
+- **PLY surface information is per face, and GUI tools vary in reading it.** Colour,
+  `building` and `semantic` (0 ground, 1 wall, 2 roof) are stored per face, which
+  keeps vertices shared and the mesh watertight. Checked: Blender's importer and
+  CloudCompare 2.14 load the geometry correctly but drop all three. Scripts reading
+  the PLY directly (plyfile, numpy, Open3D's tensor API) get them. For coloured,
+  per-building viewing, use the glTF.
 - **Single-tile flow.** Multi-tile cutting and cross-tile merge exist in the code
   (`tiling.build_grid`) but are not yet wired into a study-area run.
 
@@ -173,6 +230,7 @@ src/
   footprint_extraction/      # Byggnad GPKG -> cadastral footprints, Swedish -> English
   roofprint_preparation/     # Phase 1: DTM, class-12 recovery, roofprint buffer, tiling
   roof_reconstruction/       # Phase 2: roofer
+  model_export/              # CityJSON, CityGML, glTF, PLY
   model_inspection/          # Phase 3: inspect and repair CityJSON
   pipeline_common/           # shared config loader and QA records
   run_pipeline/              # the command line (every subcommand)

@@ -163,3 +163,44 @@ roofer:
     # Values come from `roofer --help-all`, not from the example.
     complexity_factor: 0.888
     lod13_step_height: 3.0
+
+# ---------------------------------------------------------------------------
+# Export — the formats delivered from each reconstructed tile
+# ---------------------------------------------------------------------------
+export:
+  # Written by `python main.py export` and by `all`, into out/export/<tile>/.
+  # roofer's CityJSON sequence is the source of every one, so all formats carry
+  # identical geometry. Override per run with --format.
+  #
+  #   cityjson -> <tile>.city.json  CityJSON 2.0 as one standard file
+  #   citygml  -> <tile>.city.gml   CityGML, via citygml-tools (below)
+  #   gltf     -> <tile>.glb        binary glTF 2.0 for viewers; recentred, see note
+  #   ply      -> <tile>.ply        binary PLY, real-world double coordinates
+  formats: [cityjson, citygml, gltf, ply]
+
+  # Which LoD's geometry goes into glTF and PLY. CityJSON and CityGML keep every
+  # LoD roofer wrote.
+  lod: "2.2"
+
+  citygml:
+    # "2.0" is the most widely supported; "3.0" is also available.
+    version: "2.0"
+    # Same two paths as roofer: the official image, or a native install on PATH
+    # (runner: native, which needs Java). Note this tag has no leading "v".
+    runner: docker
+    image: "citygml4j/citygml-tools:2.5.0"
+    container_root: "/work"
+    binary: "citygml-tools"
+
+  mesh:
+    # Colour by semantic class, linear RGB 0..1. glTF uses these as materials;
+    # PLY as per-face colours.
+    #
+    # glTF stores positions as float32, which at 6.2e6 m resolves only ~0.5 m.
+    # The .glb is therefore written relative to a whole-metre origin near the
+    # tile centre, recorded in the file as georeference.origin_epsg3008. It is
+    # the one export in a local frame; the other three are real-world.
+    colours:
+      RoofSurface:   [0.70, 0.27, 0.20]
+      WallSurface:   [0.86, 0.84, 0.80]
+      GroundSurface: [0.35, 0.35, 0.35]

@@ -50,6 +50,31 @@ against `3dgi/roofer:v1.0.0` on 2026-09-16.
 
 ---
 
+## citygml-tools — the CityGML converter
+
+|  |  |
+|---|---|
+| Upstream | https://github.com/citygml4j/citygml-tools |
+| Version | **2.5.0** (Docker tag `2.5.0` — no leading `v`) |
+| Licence | Apache-2.0 |
+| Modified? | **No.** |
+| Distributed here? | **No.** Installed by the user from upstream. |
+
+Used only by the CityGML export. `src/model_export/citygml.py` runs its
+`from-cityjson` command on the merged `<tile>.city.json`, in the official image or
+as a native install, and reads back the `.city.gml` it writes — the same
+separate-process arrangement as roofer.
+
+```bash
+docker pull citygml4j/citygml-tools:2.5.0
+```
+
+The native route needs a Java runtime; the official image ships Java 21, so that
+version is known to work — check the upstream release notes for the minimum.
+Verified against the `2.5.0` image on 2026-09-16.
+
+---
+
 ## Python dependencies
 
 Installed from PyPI via [requirements.txt](requirements.txt); none are redistributed
@@ -66,6 +91,7 @@ here.
 | scipy | 1.16.3 | BSD-3-Clause |
 | pandas | 2.3.3 | BSD-3-Clause |
 | PyYAML | 6.0.3 | MIT |
+| mapbox_earcut | 2.1.0 | ISC |
 
 `geopandas`, `rasterio`, `pyproj` and `shapely` bundle GDAL, PROJ and GEOS, which
 carry their own licences (MIT / X11-style and LGPL-2.1). Consult those projects if

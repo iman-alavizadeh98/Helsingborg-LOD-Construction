@@ -17,13 +17,14 @@ Every stage is also runnable on its own, in the order below:
     python main.py footprints               # cadastral footprints, Swedish -> English
     python main.py prepare  --tile 6204_105 # Phase 1: DTM, point recovery, roofprints
     python main.py roofer   --tile 6204_105 # Phase 2: reconstruct with roofer
+    python main.py export   --tile 6204_105 # CityJSON, CityGML, glTF, PLY
     python main.py inspect  --tile 6204_105 # report LoDs, roof forms, volumes
 
 ``--tile`` is optional everywhere: omit it and every tile in ``config.yml`` is
 processed. ``--config`` points at a different ``config.yml``; paths inside it
 resolve against its own directory, so these commands work from any directory.
 
-``footprints`` sits apart from the other three. It regenerates the cadastral
+``footprints`` sits apart from the others. It regenerates the cadastral
 input from Lantmäteriet's national Byggnad GeoPackage, which is not shipped with
 this repository — you only need it when refreshing the footprints, not on a
 normal run. That is why ``all`` does not include it.
@@ -39,6 +40,7 @@ from pathlib import Path
 
 # Stage entry points. Each is a `main(argv) -> int` following the same
 # convention, so this module dispatches rather than reimplementing anything.
+from model_export import export_models
 from model_inspection import inspect_cityjson
 from roof_reconstruction import run_roofer
 from roofprint_preparation import prepare_tile
@@ -47,6 +49,7 @@ from roofprint_preparation import prepare_tile
 PHASES = (
     ("prepare", "Phase 1 — prepare tile", prepare_tile.main),
     ("roofer", "Phase 2 — reconstruct with roofer", run_roofer.main),
+    ("export", "Export — CityJSON, CityGML, glTF, PLY", export_models.main),
     ("inspect", "Phase 3 — inspect output", inspect_cityjson.main),
 )
 
@@ -97,12 +100,16 @@ def run_footprints(args: argparse.Namespace) -> int:
 
 
 def run_all(args: argparse.Namespace) -> int:
-    """Run prepare -> roofer -> inspect, stopping at the first failure.
+    """Run prepare -> roofer -> export -> inspect, stopping at the first failure.
 
     Stopping matters: a failed prepare leaves no prepared LAS, and roofer would
     then fail again with a less informative message about a missing input.
     """
     for name, label, entry in PHASES:
+        if name == "export" and args.dry_run:
+            # roofer did not run, so exporting would re-export stale output as new.
+            print(f"\n{label}: skipped (--dry-run)")
+            continue
         print(f"\n{'=' * 70}\n{label}\n{'=' * 70}")
         status = entry(_forward(args, dry_run=(name == "roofer")))
         if status != 0:
@@ -127,7 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
         parser.add_argument("--tile", help="tile id from config.yml; default: all tiles")
         parser.add_argument("--config", default=None, help="path to config.yml")
 
-    p_all = sub.add_parser("all", help="prepare, reconstruct and inspect one tile")
+    p_all = sub.add_parser("all", help="prepare, reconstruct, export and inspect")
     add_tile_args(p_all)
     p_all.add_argument("--dry-run", action="store_true",
                        help="for the roofer stage: write the TOML and print the command only")
@@ -139,6 +146,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_tile_args(p_roofer)
     p_roofer.add_argument("--dry-run", action="store_true",
                           help="write the roofer TOML and print the command, run nothing")
+
+    p_export = sub.add_parser("export", help="write CityJSON, CityGML, glTF and/or PLY")
+    add_tile_args(p_export)
+    p_export.add_argument("--format", nargs="+", dest="formats",
+                          choices=export_models.FORMATS,
+                          help="formats to write; default: export.formats in config.yml")
 
     p_inspect = sub.add_parser("inspect", help="report LoDs, roof forms, volumes")
     add_tile_args(p_inspect)
@@ -170,6 +183,11 @@ def main(argv: list[str] | None = None) -> int:
         return prepare_tile.main(_forward(args))
     if args.command == "roofer":
         return run_roofer.main(_forward(args, dry_run=True))
+    if args.command == "export":
+        argv_export = _forward(args)
+        if args.formats:
+            argv_export += ["--format", *args.formats]
+        return export_models.main(argv_export)
     if args.command == "inspect":
         argv_inspect = _forward(args)
         if args.path:

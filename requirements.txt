@@ -24,3 +24,8 @@ pandas==2.3.3
 
 # Configuration.
 PyYAML==6.0.3
+
+# Export: ear-clipping triangulation of roof/wall/ground polygons for glTF and PLY.
+# (CityGML export uses citygml-tools, which runs in Docker like roofer — not a
+# Python dependency.)
+mapbox_earcut==2.1.0

@@ -41,6 +41,7 @@ src/
   footprint_extraction/     # Byggnad GPKG -> cadastral footprints (Swedish -> English)
   roofprint_preparation/    # Phase 1: DTM, class-12 recovery, roofprint buffer, tiling
   roof_reconstruction/      # Phase 2: roofer TOML + invocation
+  model_export/             # CityJSON, CityGML (citygml-tools), glTF, PLY
   model_inspection/         # Phase 3: inspect / repair CityJSON
   pipeline_common/          # config loader, QA records
   run_pipeline/             # the CLI
@@ -56,12 +57,13 @@ Everything goes through `main.py`. All stages are driven by `config.yml`; paths
 in it resolve against its own directory, so these work from anywhere.
 
 ```bash
-# the usual command — prepare, reconstruct, inspect; stops at the first failure
+# the usual command — prepare, reconstruct, export, inspect; stops at the first failure
 python main.py all --tile 6204_105
 
 # or one stage at a time
 python main.py prepare --tile 6204_105   # Phase 1: DTM, point recovery, roofprints
 python main.py roofer  --tile 6204_105   # Phase 2 — --dry-run writes the TOML only
+python main.py export  --tile 6204_105   # CityJSON, CityGML, glTF, PLY (--format to choose)
 python main.py inspect --tile 6204_105   # LoDs, semantic surfaces, roof forms, stats
 
 # omit --tile to process every tile listed in config.yml
@@ -87,7 +89,14 @@ Or use a native binary (no Docker) from the `v1.0.0` release assets and set
 locally, gitignored, only as the citable source for the claims below.
 
 Outputs land in `out/work/<tile>/` (prepared LAS, roofprints, DTM, roofer TOML),
-`out/roofer/<tile>/` (CityJSON) and `out/qa/` (QA record per tile).
+`out/roofer/<tile>/` (roofer's CityJSON sequence), `out/export/<tile>/` (CityJSON,
+CityGML, glTF, PLY) and `out/qa/` (QA record per tile).
+
+The glTF export is the one deliberate exception to "never translate to a local
+frame": float32 positions force it. Its origin is stored in the file. Every other
+export, and everything fed to roofer, stays in real-world EPSG:3008. CityGML comes
+from citygml-tools (`citygml4j/citygml-tools:2.5.0`, no leading `v`), not a
+hand-written serialiser.
 
 Two facts about roofer 1.0.0 worth keeping in mind, both established from its
 source and `--help-all` rather than from its example configs:

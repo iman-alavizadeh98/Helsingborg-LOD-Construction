@@ -27,6 +27,12 @@ LAS tile (EPSG:3008) ─────────────────┤
                            roof_reconstruction/        python main.py roofer    (Phase 2)
                              └─► out/roofer/<tile>/*.city.jsonl   CityJSON 2.0 sequence
                                       ▼
+                           model_export/               python main.py export
+                             ├─► out/export/<tile>/<tile>.city.json   CityJSON 2.0
+                             ├─► out/export/<tile>/<tile>.city.gml    CityGML (citygml-tools)
+                             ├─► out/export/<tile>/<tile>.glb         glTF 2.0
+                             └─► out/export/<tile>/<tile>.ply         PLY
+                                      ▼
                            model_inspection/           python main.py inspect   (Phase 3)
 ```
 
@@ -56,7 +62,8 @@ Adding a stage means adding a subparser plus one line in `cli.main()`.
 | File | Role |
 |---|---|
 | `config.py` | Loads `config.yml`, resolves every path against **the config file's own directory**. This is why commands work from any working directory. `Config.path()` is the single funnel — nothing builds paths by hand. |
-| `qa_record.py` | The QA record itself: `TileQA` → `StageRecord`, written as JSON and Markdown. |
+| `qa_record.py` | The QA record itself: `TileQA` → `StageRecord`, written as JSON and Markdown. Each phase runs as its own process, so `write()` merges into the tile's existing report — a stage replaces only its own earlier record. |
+| `containers.py` | Runs an external tool in Docker or as a native binary, and rebases paths onto the container mount. Shared by roofer and citygml-tools. |
 
 ### `footprint_extraction/` — cadastral footprints
 
@@ -84,6 +91,29 @@ Adding a stage means adding a subparser plus one line in `cli.main()`.
 | File | Role |
 |---|---|
 | `run_roofer.py` | Builds the roofer TOML, runs roofer, logs it, records the result. |
+
+### `model_export/` — delivery formats
+
+| File | Role |
+|---|---|
+| `cityjson_sequence.py` | Reads roofer's `.city.jsonl`; merges it into one CityJSON document by offsetting each feature's vertex indices. Quantised vertices are copied untouched. |
+| `citygml.py` | Runs citygml-tools `from-cityjson` on the merged file. CityGML is never written by hand. |
+| `triangulate.py` | Planar faces → triangles by ear clipping (`mapbox_earcut`), with a semantic code per triangle. Winding is decided once per face, from the area-weighted normal. |
+| `gltf_writer.py` | Binary glTF: root node with georeference, one node per building with attributes in `extras`, one primitive and material per semantic class. Recentred and Y-up. |
+| `ply_writer.py` | Binary PLY: real-world `double` vertices, per-face colour, `building` and `semantic`. |
+| `export_models.py` | The driver: picks formats, writes them, records the `3-export` QA stage. |
+
+Two rules the mesh code depends on:
+
+- **Recentre before arithmetic.** Normals, areas and volumes are computed on
+  coordinates minus a local mean. At 6.2 × 10⁶ m, products of raw coordinates lose
+  the precision those numbers need. Only glTF *stores* recentred coordinates, because
+  float32 forces it; the origin goes in the file.
+- **Decide triangle winding per face, never per triangle.** roofer's outlines carry
+  near-collinear vertices quantised to 1 mm; the sliver triangles they produce have
+  normals that are pure noise. Judging each triangle on its own flipped some and
+  cracked two otherwise closed buildings on tile 6204_105.
+  `tests/test_export.py` pins an exact face that reproduces it.
 
 ### `model_inspection/` — Phase 3
 
@@ -125,6 +155,10 @@ Adding a stage means adding a subparser plus one line in `cli.main()`.
 | Docker vs native roofer, image tag | `config.yml` → `roofer.runner` / `image` |
 | Which LoDs roofer emits | `config.yml` → `roofer.lod12/lod13/lod22` |
 | Plane detection sensitivity | `config.yml` → `roofer.reconstruction` |
+| Which export formats are written | `config.yml` → `export.formats`, or `--format` per run |
+| CityGML 2.0 vs 3.0 | `config.yml` → `export.citygml.version` |
+| Which LoD goes into glTF / PLY | `config.yml` → `export.lod` |
+| Roof / wall / ground colours | `config.yml` → `export.mesh.colours` |
 
 Several `config.yml` values are calibrated rather than chosen, and the comment above
 each records the evidence. `recover.planarity.max_surface_variation: 0.06` is the
@@ -170,6 +204,7 @@ Both established from roofer's source and `--help-all`, not from its example con
 
 ```bash
 python tests/test_translations.py                  # attribute translation, no runner needed
+python tests/test_export.py                        # triangulation, merge, glTF/PLY round trips
 python main.py roofer --tile 6204_105 --dry-run   # inspect the TOML and command
 python main.py all --tile 6204_105                 # full run
 python main.py inspect --tile 6204_105             # compare the numbers
