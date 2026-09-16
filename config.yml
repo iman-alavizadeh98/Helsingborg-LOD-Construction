@@ -113,10 +113,20 @@ tiling:
 # Phase 2 — roofer
 # ---------------------------------------------------------------------------
 roofer:
-  # How to invoke roofer. "docker" runs the locally built image; "native"
-  # calls a roofer binary on PATH.
+  # How to invoke roofer. Two supported paths, both using the official upstream
+  # 1.0.0 build — roofer is not redistributed with this project, and nothing
+  # here needs to be compiled. See THIRD_PARTY.md.
+  #
+  #   runner: docker  -> the published image below. `docker pull 3dgi/roofer:v1.0.0`
+  #   runner: native  -> a roofer binary on PATH. Download the release asset for
+  #                      your platform (roofer-windows-x86_64-v1.0.0.zip,
+  #                      roofer-linux-x86_64-v1.0.0.tar.gz,
+  #                      roofer-macOS-arm64-v1.0.0.tar.gz) from
+  #                      github.com/3DBAG/roofer/releases/tag/v1.0.0 and put its
+  #                      bin/ directory on PATH. No Docker required.
   runner: docker
-  image: "roofer:1.0.0"
+  # Official image on Docker Hub. Note the tag is "v1.0.0", not "1.0.0".
+  image: "3dgi/roofer:v1.0.0"
   # Mount point for the project root inside the container.
   container_root: "/work"
   binary: "roofer"

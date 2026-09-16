@@ -108,12 +108,6 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
                 f"--tile {tile_id}' first"
             )
 
-    # Clear previous output first: roofer names files after the tile origin, so
-    # a run with different inputs leaves the old files in place beside the new
-    # ones and the directory silently mixes two results.
-    if out_dir.exists():
-        shutil.rmtree(out_dir)
-
     container_root = rcfg.get("container_root", "/work") if runner == "docker" else None
     toml_text = build_toml(cfg, tile_id, container_root)
     toml_path = work / f"{tile_id}_roofer.toml"
@@ -140,6 +134,16 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
         rec.metric(command=" ".join(cmd), dry_run=True).finish()
         qa.write()
         return {"tile": tile_id, "command": cmd, "toml": toml_path, "dry_run": True}
+
+    # Clear previous output: roofer names files after the tile origin, so a run
+    # with different inputs leaves the old files in place beside the new ones and
+    # the directory silently mixes two results.
+    #
+    # This must stay *after* the dry-run return. It used to run before it, which
+    # made --dry-run delete the very output it promises not to touch.
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     proc = subprocess.run(cmd, capture_output=True, text=True)
     log_path = cfg.qa_dir / f"{tile_id}_roofer.log"

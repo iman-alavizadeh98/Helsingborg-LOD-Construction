@@ -1,0 +1,26 @@
+# LOD2.2 Building Reconstruction — Helsingborg
+#
+# Pinned to the versions this pipeline was developed and verified against, on
+# CPython 3.12.10. Install with:
+#
+#     python -m pip install -r requirements.txt
+#
+# roofer itself is NOT a Python dependency — it runs as a separate process, via
+# Docker or as a native binary. See README.md and THIRD_PARTY.md.
+
+# Geospatial vector I/O: footprints, roofprints, spatial joins.
+geopandas==1.1.3
+shapely==2.1.2
+pyproj==3.7.2
+
+# Point cloud and raster I/O.
+laspy==2.7.0
+rasterio==1.5.0
+
+# Numerics: DTM rasterisation, planarity PCA, nearest-cell gap filling.
+numpy==2.3.5
+scipy==1.16.3
+pandas==2.3.3
+
+# Configuration.
+PyYAML==6.0.3
