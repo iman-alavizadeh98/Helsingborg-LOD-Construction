@@ -146,7 +146,7 @@ Every stage writes a QA record — counts in, counts out, failures with reasons.
 - **val3dity is not included.** The official roofer image is built with
   `use_val3dity=False`, so no `rf_val3dity_*` attributes are emitted. Geometric
   validation needs val3dity installed separately.
-- **The independent QA harness is absent.** See [qa/README.md](qa/README.md) — this
+- **The independent QA harness is absent.** See [docs/QA_HARNESS.md](docs/QA_HARNESS.md) — this
   blocks roof-plane recall metrics specifically, not the pipeline.
 - **Terraced rows are the known hard case.** Always use real cadastral footprints
   rather than outlines derived from the point cloud; connected-component labelling
@@ -164,14 +164,25 @@ Every stage writes a QA record — counts in, counts out, failures with reasons.
 ## Layout
 
 ```
-main.py         # single entry point for every stage
-config.yml      # all paths and parameters; no hardcoded paths in the code
-pipeline/       # tiling, DTM, point recovery, roofer invocation, inspection
-  buildings/    # cadastral footprints: Swedish -> English, dedup snapshot
-qa/             # validation harness notes
-docs/           # code guide and project background
-data/           # LAS tiles, footprint GeoPackage (not in git)
-out/            # CityJSON, QA reports (not in git)
+main.py              # run from a clone: puts src/ on the path, calls pipeline.cli
+config.yml           # all paths and parameters; no hardcoded paths in the code
+pyproject.toml       # optional `pip install -e .`, gives the helsingborg-lod22 command
+requirements.txt     # pinned, verified dependency set
+
+src/pipeline/        # the pipeline package
+  cli.py             #   all subcommands live here
+  config.py io.py qa_record.py        #   shared: config, loading, QA records
+  dtm.py recover.py footprints.py     #   Phase 1 stages
+  tiling.py diagnose.py
+  prepare_tile.py run_roofer.py       #   phase drivers
+  inspect_cityjson.py
+  fix_cityjson.py    #   standalone viewer-repair utility
+  buildings/         #   cadastral footprints: Swedish -> English, dedup snapshot
+
+tests/               # regression tests, no runner required
+docs/                # code guide, QA harness notes, project background
+data/                # LAS tiles, footprint GeoPackage (not in git)
+out/                 # CityJSON, QA reports (not in git)
 ```
 
 ---

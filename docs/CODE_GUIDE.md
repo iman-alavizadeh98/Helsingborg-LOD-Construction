@@ -12,12 +12,12 @@ covers the code itself.
 
 ```
 Lantmäteriet Byggnad GPKG  ─┐
-  (national, EPSG:3006)     │  pipeline/buildings/     "footprints" stage
+  (national, EPSG:3006)     │  src/pipeline/buildings/ "footprints" stage
                             └─► buildings_processed_postprocess.gpkg
                                        │
 LAS tile (EPSG:3008) ──────────────────┤
                                        ▼
-                            pipeline/prepare_tile.py   "prepare"  (Phase 1)
+                            src/pipeline/prepare_tile.py   "prepare"  (Phase 1)
                               ├─ dtm.py       0.5 m terrain raster
                               ├─ recover.py   roof points, geometrically
                               ├─ footprints.py  offset measure + buffer sweep
@@ -28,12 +28,12 @@ LAS tile (EPSG:3008) ──────────────────┤
                                        ├─► <tile>_roofprints.gpkg  (buffered)
                                        └─► <tile>_dtm.tif
                                        ▼
-                            pipeline/run_roofer.py     "roofer"   (Phase 2)
+                            src/pipeline/run_roofer.py     "roofer"   (Phase 2)
                               writes a TOML, runs roofer as a subprocess
                                        │
                                        └─► out/roofer/<tile>/*.city.jsonl   ← deliverable
                                        ▼
-                            pipeline/inspect_cityjson.py  "inspect" (Phase 3)
+                            src/pipeline/inspect_cityjson.py  "inspect" (Phase 3)
 ```
 
 Every stage writes into a `TileQA` record (`qa_record.py`): counts in, counts out,
@@ -47,13 +47,14 @@ metrics, and named failures. One `out/qa/<tile>_qa.md` and `.json` per tile.
 
 | File | Role |
 |---|---|
-| `main.py` | The only entry point you need. Dispatches to each stage's own `main(argv)`; adds nothing but the `all` chain. |
+| `main.py` | Root shim: puts `src/` on `sys.path`, then calls `pipeline.cli`. Lets a clone run with nothing installed. |
+| `src/pipeline/cli.py` | Every subcommand. Dispatches to each stage's own `main(argv)`; adds nothing but the `all` chain. Also the `helsingborg-lod22` console script. |
 
-Each stage module also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`),
-and `main.py` calls those rather than duplicating them. Adding a stage means adding a
-subparser plus one line in `main()`.
+Each stage module also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`,
+with `src/` on `PYTHONPATH`), and `cli.py` calls those rather than duplicating them.
+Adding a stage means adding a subparser plus one line in `cli.main()`.
 
-### Core pipeline (`pipeline/`)
+### Core pipeline (`src/pipeline/`)
 
 | File | Role |
 |---|---|
@@ -68,16 +69,17 @@ subparser plus one line in `main()`.
 | `prepare_tile.py` | Phase 1 driver. Chains the above and writes the three prepared inputs. |
 | `run_roofer.py` | Phase 2 driver. Builds the roofer TOML, runs roofer, logs it, records the result. |
 | `inspect_cityjson.py` | Phase 3 driver. LoDs, semantic surfaces, roof forms, volume and height stats. |
+| `cli.py` | Every subcommand; see above. |
 | `fix_cityjson.py` | Standalone utility, not a stage. Strips bare `NaN` (which is not legal JSON) so strict viewers accept a file. |
 
-### Footprints (`pipeline/buildings/`)
+### Footprints (`src/pipeline/buildings/`)
 
 | File | Role |
 |---|---|
 | `base.py` | Abstract `load → validate → preprocess → export` template. `run()` returns a summary dict rather than raising. |
 | `pipeline.py` | The Byggnad implementation, plus the value translators (`translate_purpose`, `purpose_category`, `translate_collection_level`). |
 | `postprocess.py` | Collapses the version history to the newest row per `object_id`. Called from `export()`. |
-| `translations.py` | Swedish → English lookup tables. Constants only — the YAML loader is `pipeline/config.py`. |
+| `translations.py` | Swedish → English lookup tables. Constants only — the YAML loader is `src/pipeline/config.py`. |
 
 ---
 

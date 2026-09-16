@@ -17,7 +17,7 @@ below are not ours and carry their own terms.
 
 ### How it is used
 
-roofer is invoked as a **separate process**. `pipeline/run_roofer.py` writes a TOML
+roofer is invoked as a **separate process**. `src/pipeline/run_roofer.py` writes a TOML
 configuration, runs the roofer executable (in a container or as a native binary),
 and reads back the CityJSON it produces. No roofer code is linked, imported, copied
 or vendored into this project, and no roofer binary is redistributed with it.

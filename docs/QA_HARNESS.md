@@ -37,4 +37,4 @@ part of the same ground, in `out/qa/`:
 | `<tile>_qa.md` | the same record, readable |
 | `<tile>_per_building.csv` | per footprint: failure reason, point counts, coverage, measured eave offset |
 
-The failure reasons emitted are documented in `pipeline/diagnose.py`.
+The failure reasons emitted are documented in `src/pipeline/diagnose.py`.

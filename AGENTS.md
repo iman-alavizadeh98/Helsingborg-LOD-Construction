@@ -36,9 +36,12 @@ Full specification: @docs/PROJECT_PLAN.md — read it before starting new work.
 ## Layout
 
 ```
+main.py        # entry point from a clone; the commands live in pipeline.cli
+src/pipeline/  # tiling, DTM, point recovery, roofer invocation, inspection
+  buildings/   # cadastral footprints: Swedish -> English, dedup snapshot
+tests/         # regression tests
+docs/          # code guide, QA harness notes, project background
 data/          # LAS tiles, footprint GPKG (gitignored)
-pipeline/      # tiling, DTM, point recovery, roofer invocation
-qa/            # validation harness — RANSAC plane stats, metrics, val3dity
 out/           # CityJSON, reports (gitignored)
 ```
 
@@ -63,7 +66,8 @@ python main.py inspect --tile 6204_105   # LoDs, semantic surfaces, roof forms, 
 python main.py footprints --input path/to/byggnad_sverige.gpkg --output data
 ```
 
-Each stage also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`);
+Each stage also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`,
+with `src/` on `PYTHONPATH`);
 `main.py` dispatches to those rather than reimplementing them.
 
 Install roofer from the official 1.0.0 build — it is not vendored, and nothing

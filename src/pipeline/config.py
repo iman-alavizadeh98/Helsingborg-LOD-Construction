@@ -142,14 +142,20 @@ def load_config(path: str | Path | None = None) -> Config:
 
 
 def _find_config() -> Path:
-    """Walk up from the CWD, then fall back to the package's parent."""
-    for directory in [Path.cwd(), *Path.cwd().parents]:
-        candidate = directory / DEFAULT_CONFIG_NAME
-        if candidate.is_file():
-            return candidate
-    fallback = Path(__file__).resolve().parent.parent / DEFAULT_CONFIG_NAME
-    if fallback.is_file():
-        return fallback
+    """Walk up from the CWD, then up from this file, looking for ``config.yml``.
+
+    The second search is what makes the pipeline work when it is invoked from
+    somewhere else entirely — a scheduler, another project's virtualenv. It walks
+    rather than counting directories up to the repository root: the package has
+    already moved once (``pipeline/`` to ``src/pipeline/``), and a hardcoded
+    number of ``.parent`` calls silently resolves to the wrong directory when
+    that happens again.
+    """
+    for start in (Path.cwd(), Path(__file__).resolve().parent):
+        for directory in [start, *start.parents]:
+            candidate = directory / DEFAULT_CONFIG_NAME
+            if candidate.is_file():
+                return candidate
     raise ConfigError(
         f"no {DEFAULT_CONFIG_NAME} found in the working directory or any parent"
     )

@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+#
+# Installing is optional. `python main.py ...` works straight from a clone,
+# because main.py puts src/ on sys.path itself. Install when you want the
+# `helsingborg-lod22` command, or to import the package from another project:
+#
+#     python -m pip install -e .
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helsingborg-lod22"
+version = "0.1.0"
+description = "LOD2.2 building reconstruction from airborne LiDAR and cadastral footprints"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Iman Alavi Zadeh", email = "iman.alavi98@gmail.com" }]
+keywords = ["lidar", "cityjson", "lod2", "3d-reconstruction", "gis"]
+
+# Kept in step with requirements.txt, which is the pinned, verified set.
+dependencies = [
+    "geopandas>=1.1.3",
+    "shapely>=2.1.2",
+    "pyproj>=3.7.2",
+    "laspy>=2.7.0",
+    "rasterio>=1.5.0",
+    "numpy>=2.3.5",
+    "scipy>=1.16.3",
+    "pandas>=2.3.3",
+    "PyYAML>=6.0.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/3DBAG/roofer"
+
+[project.scripts]
+helsingborg-lod22 = "pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

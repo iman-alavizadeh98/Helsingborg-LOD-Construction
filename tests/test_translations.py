@@ -27,7 +27,7 @@ regression here is measured against the actual data rather than an invented case
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from pipeline.buildings.pipeline import (  # noqa: E402
     purpose_category,
