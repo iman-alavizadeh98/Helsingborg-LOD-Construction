@@ -1,0 +1,19 @@
+# Data and generated output are not checked in (see CLAUDE.md layout).
+data/
+out/
+
+# Vendored upstream source — obtain via the pinned tag, do not commit.
+roofer-1.0.0/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,11 @@
+# Normalise line endings. Developed on Windows; keep LF in the repository so
+# diffs stay clean when the customer works on Linux or macOS.
+* text=auto eol=lf
+
+# Binary inputs and outputs — never diffed, never line-ending converted.
+*.las   binary
+*.laz   binary
+*.lasx  binary
+*.gpkg  binary
+*.tif   binary
+*.png   binary

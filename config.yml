@@ -1,0 +1,155 @@
+# LOD2.2 Building Reconstruction — Helsingborg
+# Config-driven pipeline. No hardcoded paths anywhere in pipeline/.
+# All distances in metres, all coordinates EPSG:3008 (SWEREF99 13 30).
+
+project:
+  name: helsingborg-lod22
+  # Target CRS, used end to end. Never translated to a local frame.
+  crs: "EPSG:3008"
+
+paths:
+  # Relative paths resolve against this file's directory, so the pipeline runs
+  # the same from any working directory.
+  root: "."
+  las_dir: "data"
+  footprints: "data/buildings_processed_postprocess.gpkg"
+  footprints_layer: "buildings_postprocess"
+  footprints_crs: "EPSG:3006"     # source CRS; reprojected to project.crs on load
+  out_dir: "out"
+  work_dir: "out/work"
+  qa_dir: "out/qa"
+
+tiles:
+  # One entry per tile. `las` is resolved against paths.las_dir.
+  - id: "6204_105"
+    las: "6204_105_hbg.las"
+
+# ---------------------------------------------------------------------------
+# 1.1 Ground and DTM
+# ---------------------------------------------------------------------------
+dtm:
+  resolution: 0.5
+  # ASPRS ground classes. Class 11 (road) is also terrain and can be added to
+  # improve coverage in street corridors; the plan specifies class 2.
+  ground_classes: [2]
+  # Per-cell reducer over ground returns: median is robust to low outliers
+  # that would otherwise depress the surface and inflate height-above-ground.
+  cell_statistic: median
+  # There are no ground returns under buildings, so gaps are filled by exact
+  # nearest-valid-cell (Euclidean distance transform), not interpolation.
+  fill_gaps: true
+  # Cells further than this from any observed ground cell are left nodata and
+  # reported; nothing is recovered there.
+  max_fill_distance: 50.0
+
+# ---------------------------------------------------------------------------
+# 1.2 Recover the overlap class
+# ---------------------------------------------------------------------------
+recover:
+  # Always-building class, taken as-is.
+  building_classes: [6]
+  # Unlabelled classes recovered geometrically. Class 12 (overlap) is 38% of
+  # this data and holds most of the roof returns; class 1 is unclassified.
+  recover_classes: [1, 12]
+  # Never recovered: 7 = noise, 3/4/5 = vegetation, 2 = ground, 11 = road.
+  exclude_classes: [7]
+  # Height above the rasterised DTM required to be a roof candidate.
+  min_height_above_dtm: 2.0
+
+  planarity:
+    # Residual vegetation is removed by local surface planarity, not class
+    # label. PCA over each point's k nearest neighbours; surface variation
+    # c = l0 / (l0 + l1 + l2) is ~0 on a plane and rises on scattered foliage.
+    enabled: true
+    k_neighbours: 12
+    # Neighbourhood radius cap; neighbours beyond this are ignored.
+    max_radius: 1.5
+    # Keep points with surface variation below this. Tuned for 50 pts/m2.
+    #
+    # Calibrated on tile 6204_105 rather than guessed. At 0.06 the filter drops
+    # 3.5% of the class-6 points, and those points are 2.3x enriched in
+    # multi-return pulses (32.8% vs 14.0% of those kept) and sit ~1 m higher —
+    # both signatures of canopy overhanging a roof, not of roof itself. Edge
+    # enrichment is mild (57% within 1 m of a footprint edge against a 47%
+    # baseline), so this is not eroding roof outlines.
+    #
+    # Sensitivity: 0.02 drops 22.6% of class 6 (too aggressive), 0.15 drops
+    # 0.2% (does nothing). 0.04-0.08 is the usable band.
+    max_surface_variation: 0.06
+    # Applied uniformly to all candidates (class-agnostic, per the plan), but
+    # counts are reported per source class so the effect on class 6 is visible.
+
+# ---------------------------------------------------------------------------
+# 1.3 Footprint / roofprint offset
+# ---------------------------------------------------------------------------
+footprints:
+  # Explode MultiPolygon -> Polygon at load.
+  explode: true
+  # Discard slivers below this area before measuring.
+  min_area: 2.0
+  # Only points within this distance of a footprint boundary contribute to the
+  # offset estimate, so a neighbouring building's roof cannot bias it.
+  offset_search_distance: 3.0
+  # Minimum outside-points needed before a building's offset is trusted.
+  min_points_for_offset: 20
+  # Candidate buffers swept; the report ranks them by point-capture rate.
+  buffer_sweep: [0.0, 0.25, 0.5, 0.75, 1.0]
+  # Set after calibration; null means "use the swept recommendation".
+  buffer: null
+
+# ---------------------------------------------------------------------------
+# 1.5 Tiling
+# ---------------------------------------------------------------------------
+tiling:
+  # Common grid shared by point cloud and footprints.
+  size: 250.0
+  # Overlap so buildings straddling a tile edge are complete in both tiles.
+  # Duplicates are resolved later by footprint centroid ownership.
+  buffer: 20.0
+  # Grid origin. null anchors the grid to the data extent, rounded down.
+  origin: null
+
+# ---------------------------------------------------------------------------
+# Phase 2 — roofer
+# ---------------------------------------------------------------------------
+roofer:
+  # How to invoke roofer. "docker" runs the locally built image; "native"
+  # calls a roofer binary on PATH.
+  runner: docker
+  image: "roofer:1.0.0"
+  # Mount point for the project root inside the container.
+  container_root: "/work"
+  binary: "roofer"
+
+  # roofer keeps a point only if its class equals one of these two — verified
+  # in src/extra/io/StreamCropper.cpp. Anything else is dropped, which is why
+  # Phase 1 writes a prepared LAS with recovered roof points relabelled to 6.
+  bld_class: 6
+  grnd_class: 2
+
+  # Attribute carried through to the output as the building id.
+  id_attribute: "bid"
+
+  # Which LoDs to emit. Selected by boolean, not by a `lod = 22` key — that
+  # form appears in the upstream example_full.toml but is not accepted by the
+  # 1.0.0 binary. LOD2.2 is the deliverable; 1.2/1.3 are cheap to add and
+  # useful as fallbacks.
+  lod12: false
+  lod13: false
+  lod22: true
+
+  reconstruction:
+    # roofer thins each building to this density before plane detection, so
+    # the plane parameters below are calibrated against *this* number, not the
+    # ~50 pts/m2 of the raw tile. Raise the ceiling and the minimum point
+    # count has to rise with it or the same physical patch will over-segment.
+    ceil_point_density: 20
+    cellsize: 0.5
+    plane_detect_epsilon: 0.3
+    plane_detect_k: 15
+    plane_detect_min_points: 15
+    # roofer 1.0.0's own default is 0.888. The upstream example_full.toml says
+    # 0.7, but that file is stale — it also documents the rejected `lod = 22`.
+    # Values come from `roofer --help-all`, not from the example.
+    complexity_factor: 0.888
+    lod13_step_height: 3.0
