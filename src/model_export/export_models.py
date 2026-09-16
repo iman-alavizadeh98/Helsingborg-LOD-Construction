@@ -149,10 +149,10 @@ def export_tile(cfg: Config, tile_id: str, formats: list[str] | None = None) -> 
     missing = [f for f in formats if f not in written]
     rec.count_out(formats_written=len(written), formats_failed=len(missing))
     rec.finish()
-    json_path, md_path = qa.write()
+    json_path, md_path, html_path = qa.write()
     return {
         "tile": tile_id, "written": written, "failed": missing,
-        "qa_md": md_path, "qa_json": json_path,
+        "qa_md": md_path, "qa_json": json_path, "qa_html": html_path,
     }
 
 
@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         for fmt, path in result["written"].items():
             print(f"  {fmt:9s}: {path}")
         for fmt in result["failed"]:
-            print(f"  {fmt:9s}: FAILED — see {result['qa_md']}")
+            print(f"  {fmt:9s}: FAILED — see {result['qa_html']}")
             status = 1
     return status
 

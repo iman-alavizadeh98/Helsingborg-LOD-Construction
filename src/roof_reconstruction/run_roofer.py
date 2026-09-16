@@ -113,14 +113,15 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
     toml_path.write_text(toml_text, encoding="utf-8")
     cmd = prefix + ["--config", container_path(cfg.root, toml_path, container_root)]
 
+    if dry_run:
+        # No QA record: a dry run reconstructs nothing, and the tile report is
+        # merged across runs, so writing one would replace the record of the last
+        # real roofer run with a stage that describes no output.
+        return {"tile": tile_id, "command": cmd, "toml": toml_path, "dry_run": True}
+
     qa = TileQA(tile_id, cfg.qa_dir, config={"roofer": rcfg})
     rec = qa.stage("2-roofer")
     rec.count_in(config=str(toml_path), runner=runner)
-
-    if dry_run:
-        rec.metric(command=" ".join(cmd), dry_run=True).finish()
-        qa.write()
-        return {"tile": tile_id, "command": cmd, "toml": toml_path, "dry_run": True}
 
     # Clear previous output: roofer names files after the tile origin, so a run
     # with different inputs leaves the old files in place beside the new ones and
@@ -155,11 +156,11 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
         rec.failure("roofer_no_output", log=str(log_path))
     rec.finish()
 
-    json_path, md_path = qa.write()
+    json_path, md_path, html_path = qa.write()
     return {
         "tile": tile_id, "command": cmd, "toml": toml_path,
         "exit_code": proc.returncode, "outputs": produced,
-        "log": log_path, "qa_md": md_path, "qa_json": json_path,
+        "log": log_path, "qa_md": md_path, "qa_json": json_path, "qa_html": html_path,
         "stdout": proc.stdout, "stderr": proc.stderr,
     }
 

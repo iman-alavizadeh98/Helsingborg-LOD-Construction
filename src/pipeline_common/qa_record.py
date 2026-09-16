@@ -7,8 +7,12 @@
 """QA records.
 
 Convention: every pipeline stage writes a QA record with counts in, counts out
-and failures. Records accumulate into one per-tile JSON plus a readable
-Markdown summary.
+and failures. Records accumulate into one report per tile, written three ways
+from the same data:
+
+* ``<tile>_qa.json`` — the complete machine-readable record
+* ``<tile>_qa.md``   — plain-text summary, good in a diff or a code review
+* ``<tile>_qa.html`` — the same content for a browser; see ``qa_report_html``
 """
 
 from __future__ import annotations
@@ -131,7 +135,7 @@ class TileQA:
 
     # -- writing -----------------------------------------------------------
 
-    def write(self) -> tuple[Path, Path]:
+    def write(self) -> tuple[Path, Path, Path]:
         """Write the tile's report, merged with whatever earlier stages recorded.
 
         Each phase runs as its own process and builds its own ``TileQA``, but they
@@ -139,8 +143,14 @@ class TileQA:
         to replace the file wholesale, so running roofer erased every Phase 1
         stage — the report ended up describing only the last command run. Now a
         stage name that appears in this run replaces its earlier record, and every
-        other stage already on disk is kept, in its original order.
+        other stage already on disk is kept; stages are then ordered by phase.
+
+        Returns the paths of the JSON, Markdown and HTML reports.
         """
+        # Imported here, not at module scope: the HTML renderer reuses this
+        # module's value formatter, and a top-level import would be circular.
+        from .qa_report_html import render_html
+
         json_path = self.qa_dir / f"{self.tile_id}_qa.json"
         data = self._merge_with_existing(self.to_dict(), json_path)
         with open(json_path, "w", encoding="utf-8") as fh:
@@ -148,7 +158,10 @@ class TileQA:
         md_path = self.qa_dir / f"{self.tile_id}_qa.md"
         with open(md_path, "w", encoding="utf-8") as fh:
             fh.write(self._markdown(data))
-        return json_path, md_path
+        html_path = self.qa_dir / f"{self.tile_id}_qa.html"
+        with open(html_path, "w", encoding="utf-8") as fh:
+            fh.write(render_html(data, self.qa_dir))
+        return json_path, md_path, html_path
 
     @staticmethod
     def _merge_with_existing(data: dict[str, Any], json_path: Path) -> dict[str, Any]:
@@ -209,7 +222,7 @@ class TileQA:
                 add("| key | value |")
                 add("|---|---|")
                 for k, v in block.items():
-                    add(f"| {k} | {_fmt(v)} |")
+                    add(f"| {k} | {_fmt_field(k, v)} |")
                 add("")
             if stage["failures"]:
                 add(f"**Flagged ({len(stage['failures'])})**")
@@ -223,7 +236,7 @@ class TileQA:
                 add("| " + " | ".join(keys) + " |")
                 add("|" + "|".join("---" for _ in keys) + "|")
                 for f in shown:
-                    add("| " + " | ".join(_fmt(f.get(k, "")) for k in keys) + " |")
+                    add("| " + " | ".join(_fmt_field(k, f.get(k, "")) for k in keys) + " |")
                 if len(stage["failures"]) > len(shown):
                     add("")
                     add(f"_… {len(stage['failures']) - len(shown)} more in the JSON record._")
@@ -243,11 +256,33 @@ def _phase_of(stage: dict[str, Any]) -> int:
     return int(head) if head.isdigit() else 99
 
 
+# Keys whose integer values are identifiers or codes, not quantities. Formatting
+# them as numbers printed building 1074 as "1,074".
+_ID_KEYS = {"bid", "building", "building_id", "exit_code"}
+
+
+def _fmt_field(key: str, v: Any) -> str:
+    """Format a value, knowing which field it belongs to."""
+    if key in _ID_KEYS and isinstance(v, int) and not isinstance(v, bool):
+        return str(v)
+    return _fmt(v)
+
+
 def _fmt(v: Any) -> str:
+    """Format one value for a human-readable report (Markdown or HTML)."""
     if v is None:
         return "—"
+    # bool is a subclass of int: test it first, or True prints as "1".
+    if isinstance(v, bool):
+        return "yes" if v else "no"
     if isinstance(v, float):
-        return f"{v:,.3f}".rstrip("0").rstrip(".") if abs(v) < 1e6 else f"{v:.3e}"
+        if abs(v) >= 1e6:
+            # Coordinates. Scientific notation turned 6204507.44 into "6.205e+06",
+            # which hid the very position the extent is there to show.
+            return f"{v:,.2f}"
+        if v != 0 and abs(v) < 1e-3:
+            return f"{v:.3e}"
+        return f"{v:,.3f}".rstrip("0").rstrip(".")
     if isinstance(v, int):
         return f"{v:,}"
     if isinstance(v, (list, tuple)):

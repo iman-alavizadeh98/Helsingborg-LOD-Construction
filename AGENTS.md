@@ -90,7 +90,7 @@ locally, gitignored, only as the citable source for the claims below.
 
 Outputs land in `out/work/<tile>/` (prepared LAS, roofprints, DTM, roofer TOML),
 `out/roofer/<tile>/` (roofer's CityJSON sequence), `out/export/<tile>/` (CityJSON,
-CityGML, glTF, PLY) and `out/qa/` (QA record per tile).
+CityGML, glTF, PLY) and `out/qa/` (QA record per tile, as JSON, Markdown and HTML).
 
 The glTF export is the one deliberate exception to "never translate to a local
 frame": float32 positions force it. Its origin is stored in the file. Every other

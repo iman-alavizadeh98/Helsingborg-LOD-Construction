@@ -47,7 +47,9 @@ Everything else, also per tile, in `out/`:
 | `work/<tile>/<tile>_prepared.las` | Cleaned cloud: ground + recovered roof points |
 | `work/<tile>/<tile>_roofprints.gpkg` | Footprints buffered out to the roof edge |
 | `work/<tile>/<tile>_dtm.tif` | Gap-filled terrain raster, 0.5 m |
-| `qa/<tile>_qa.md` | Per-stage QA report: counts in, counts out, failures |
+| `qa/<tile>_qa.html` | Per-stage QA report for a browser: stage runtimes, every flagged building with the reason in plain words, links to outputs |
+| `qa/<tile>_qa.md` | The same report as plain text |
+| `qa/<tile>_qa.json` | The complete machine-readable QA record |
 | `qa/<tile>_per_building.csv` | Per-building diagnostics |
 
 On the reference tile `6204_105` (236 × 193 m, 2.26 M points) that is 66 buildings,

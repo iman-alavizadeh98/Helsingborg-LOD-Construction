@@ -200,11 +200,12 @@ def prepare_tile(cfg: Config, tile_id: str) -> dict:
     rec.output(las_path).output(gpkg_path).output(table_path)
     rec.finish()
 
-    json_path, md_path = qa.write()
+    json_path, md_path, html_path = qa.write()
     return {
         "tile": tile_id,
         "qa_json": json_path,
         "qa_md": md_path,
+        "qa_html": html_path,
         "las": las_path,
         "gpkg": gpkg_path,
         "dtm": dtm_path,
@@ -234,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  roof points      : {result['roof_points']:,}")
         print(f"  measured offset  : {result['median_offset_m']}")
         print(f"  chosen buffer    : {result['chosen_buffer_m']} m")
-        print(f"  QA report        : {result['qa_md']}")
+        print(f"  QA report        : {result['qa_html']}")
     return 0
 
 

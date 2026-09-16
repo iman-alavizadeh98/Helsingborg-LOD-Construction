@@ -40,7 +40,7 @@ LAS tile (EPSG:3008) ─────────────────┤
 `run_pipeline/` is the command line that drives them.
 
 Every stage writes into a `TileQA` record: counts in, counts out, metrics, and named
-failures. One `out/qa/<tile>_qa.md` and `.json` per tile.
+failures. One `out/qa/<tile>_qa.json`, `.md` and `.html` per tile.
 
 ---
 
@@ -62,7 +62,8 @@ Adding a stage means adding a subparser plus one line in `cli.main()`.
 | File | Role |
 |---|---|
 | `config.py` | Loads `config.yml`, resolves every path against **the config file's own directory**. This is why commands work from any working directory. `Config.path()` is the single funnel — nothing builds paths by hand. |
-| `qa_record.py` | The QA record itself: `TileQA` → `StageRecord`, written as JSON and Markdown. Each phase runs as its own process, so `write()` merges into the tile's existing report — a stage replaces only its own earlier record. |
+| `qa_record.py` | The QA record itself: `TileQA` → `StageRecord`, written as JSON, Markdown and HTML. Each phase runs as its own process, so `write()` merges into the tile's existing report — a stage replaces only its own earlier record. |
+| `qa_report_html.py` | Renders the QA record as one self-contained HTML page: stage overview, flagged buildings across stages, plain-language failure explanations. New stages and failure kinds need an entry in `STAGE_TITLES` / `FAILURE_HELP` to get a friendly label; without one they still render, under their raw name. |
 | `containers.py` | Runs an external tool in Docker or as a native binary, and rebases paths onto the container mount. Shared by roofer and citygml-tools. |
 
 ### `footprint_extraction/` — cadastral footprints
