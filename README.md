@@ -164,20 +164,18 @@ Every stage writes a QA record — counts in, counts out, failures with reasons.
 ## Layout
 
 ```
-main.py              # run from a clone: puts src/ on the path, calls pipeline.cli
-config.yml           # all paths and parameters; no hardcoded paths in the code
-pyproject.toml       # optional `pip install -e .`, gives the helsingborg-lod22 command
-requirements.txt     # pinned, verified dependency set
+main.py                      # run from a clone: puts src/ on the path, calls run_pipeline.cli
+config.yml                   # all paths and parameters; no hardcoded paths in the code
+pyproject.toml               # optional `pip install -e .`, gives the helsingborg-lod22 command
+requirements.txt             # pinned, verified dependency set
 
-src/pipeline/        # the pipeline package
-  cli.py             #   all subcommands live here
-  config.py io.py qa_record.py        #   shared: config, loading, QA records
-  dtm.py recover.py footprints.py     #   Phase 1 stages
-  tiling.py diagnose.py
-  prepare_tile.py run_roofer.py       #   phase drivers
-  inspect_cityjson.py
-  fix_cityjson.py    #   standalone viewer-repair utility
-  buildings/         #   cadastral footprints: Swedish -> English, dedup snapshot
+src/
+  footprint_extraction/      # Byggnad GPKG -> cadastral footprints, Swedish -> English
+  roofprint_preparation/     # Phase 1: DTM, class-12 recovery, roofprint buffer, tiling
+  roof_reconstruction/       # Phase 2: roofer
+  model_inspection/          # Phase 3: inspect and repair CityJSON
+  pipeline_common/           # shared config loader and QA records
+  run_pipeline/              # the command line (every subcommand)
 
 tests/               # regression tests, no runner required
 docs/                # code guide, QA harness notes, project background

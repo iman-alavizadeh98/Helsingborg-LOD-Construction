@@ -147,7 +147,8 @@ def _find_config() -> Path:
     The second search is what makes the pipeline work when it is invoked from
     somewhere else entirely — a scheduler, another project's virtualenv. It walks
     rather than counting directories up to the repository root: the package has
-    already moved once (``pipeline/`` to ``src/pipeline/``), and a hardcoded
+    already moved twice (from ``pipeline/`` to ``src/pipeline/`` to
+    ``src/pipeline_common/``), and a hardcoded
     number of ``.parent`` calls silently resolves to the wrong directory when
     that happens again.
     """

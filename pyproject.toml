@@ -42,7 +42,7 @@ dependencies = [
 Homepage = "https://github.com/3DBAG/roofer"
 
 [project.scripts]
-helsingborg-lod22 = "pipeline.cli:main"
+helsingborg-lod22 = "run_pipeline.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

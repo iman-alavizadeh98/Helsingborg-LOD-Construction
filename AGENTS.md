@@ -36,9 +36,14 @@ Full specification: @docs/PROJECT_PLAN.md — read it before starting new work.
 ## Layout
 
 ```
-main.py        # entry point from a clone; the commands live in pipeline.cli
-src/pipeline/  # tiling, DTM, point recovery, roofer invocation, inspection
-  buildings/   # cadastral footprints: Swedish -> English, dedup snapshot
+main.py                     # entry point from a clone; commands live in run_pipeline.cli
+src/
+  footprint_extraction/     # Byggnad GPKG -> cadastral footprints (Swedish -> English)
+  roofprint_preparation/    # Phase 1: DTM, class-12 recovery, roofprint buffer, tiling
+  roof_reconstruction/      # Phase 2: roofer TOML + invocation
+  model_inspection/         # Phase 3: inspect / repair CityJSON
+  pipeline_common/          # config loader, QA records
+  run_pipeline/             # the CLI
 tests/         # regression tests
 docs/          # code guide, QA harness notes, project background
 data/          # LAS tiles, footprint GPKG (gitignored)
@@ -66,7 +71,7 @@ python main.py inspect --tile 6204_105   # LoDs, semantic surfaces, roof forms, 
 python main.py footprints --input path/to/byggnad_sverige.gpkg --output data
 ```
 
-Each stage also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`,
+Each stage also keeps its own CLI (`python -m roofprint_preparation.prepare_tile --tile X`,
 with `src/` on `PYTHONPATH`);
 `main.py` dispatches to those rather than reimplementing them.
 

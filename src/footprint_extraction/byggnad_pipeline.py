@@ -23,7 +23,7 @@ Four stages, inherited from :class:`~.base.BasePipeline`:
 Run it with ``python main.py footprints``.
 
 Note this stage is about *attributes*. The reconstruction pipeline reads only
-geometry from the result and assigns its own ``bid`` (``pipeline/io.py``), so
+geometry from the result and assigns its own ``bid`` (``roofprint_preparation/readers.py``), so
 nothing here changes the shape of a roof. The attributes matter for filtering and
 for reporting, not for the solids.
 """
@@ -35,7 +35,7 @@ import json
 import numpy as np
 
 from .base import BasePipeline
-from .postprocess import build_postprocess_snapshot
+from .dedup_snapshot import build_postprocess_snapshot
 from .translations import (
     FIELD_TRANSLATIONS,
     BUILDING_TYPES,
@@ -214,7 +214,7 @@ class BuildingsPipeline(BasePipeline):
         }
 
         # Source CRS is SWEREF 99 TM. The reconstruction pipeline reprojects to
-        # EPSG:3008 on load (pipeline/io.py), so this checks provenance, not the
+        # EPSG:3008 on load (roofprint_preparation/readers.py), so this checks provenance, not the
         # working CRS.
         if self.data.crs is None:
             report["issues"].append("No CRS on the source layer")

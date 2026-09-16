@@ -7,7 +7,7 @@
 """Single entry point for the whole LOD2.2 pipeline.
 
 Reached three ways, all equivalent — ``python main.py`` from a clone, ``python -m
-pipeline.cli`` once ``src/`` is importable, or the ``helsingborg-lod22`` command
+run_pipeline.cli`` once ``src/`` is importable, or the ``helsingborg-lod22`` command
 after ``pip install -e .``. The examples below use the first.
 
     python main.py all --tile 6204_105      # the usual command
@@ -39,7 +39,9 @@ from pathlib import Path
 
 # Stage entry points. Each is a `main(argv) -> int` following the same
 # convention, so this module dispatches rather than reimplementing anything.
-from . import inspect_cityjson, prepare_tile, run_roofer
+from model_inspection import inspect_cityjson
+from roof_reconstruction import run_roofer
+from roofprint_preparation import prepare_tile
 
 # The order `all` runs them in, and the labels used in its progress output.
 PHASES = (
@@ -65,7 +67,7 @@ def run_footprints(args: argparse.Namespace) -> int:
     """Regenerate the cadastral footprint layer from the raw Byggnad extract."""
     # Imported here rather than at module scope: this stage is the only one that
     # needs the buildings package, and a normal run should not pay for it.
-    from .buildings import BuildingsPipeline
+    from footprint_extraction import BuildingsPipeline
 
     # Check the input up front. BasePipeline.run() catches everything and logs a
     # traceback, which is the right behaviour mid-run but poor for a mistyped

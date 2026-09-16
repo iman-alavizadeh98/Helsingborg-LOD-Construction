@@ -6,7 +6,7 @@
 
 """Phase 2 driver — reconstruct one prepared tile with roofer.
 
-    python -m pipeline.run_roofer --tile 6204_105
+    python main.py roofer --tile 6204_105
 
 Consumes the Phase 1 outputs (``<tile>_prepared.las`` and
 ``<tile>_roofprints.gpkg``), writes a roofer TOML, runs roofer, and records the
@@ -30,8 +30,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .config import Config, load_config
-from .qa_record import TileQA
+from pipeline_common.config import Config, load_config
+from pipeline_common.qa_record import TileQA
 
 
 def _toml_path(root: Path, path: Path, container_root: str | None) -> str:
@@ -104,7 +104,7 @@ def run_roofer(cfg: Config, tile_id: str, dry_run: bool = False) -> dict:
                      work / f"{tile_id}_roofprints.gpkg"):
         if not required.is_file():
             raise FileNotFoundError(
-                f"{required} is missing — run 'python -m pipeline.prepare_tile "
+                f"{required} is missing — run 'python main.py prepare "
                 f"--tile {tile_id}' first"
             )
 

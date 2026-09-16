@@ -10,34 +10,31 @@ covers the code itself.
 
 ## Data flow
 
+One folder per pipeline under `src/`, named for what it does. They run in this order:
+
 ```
-Lantmäteriet Byggnad GPKG  ─┐
-  (national, EPSG:3006)     │  src/pipeline/buildings/ "footprints" stage
-                            └─► buildings_processed_postprocess.gpkg
-                                       │
-LAS tile (EPSG:3008) ──────────────────┤
-                                       ▼
-                            src/pipeline/prepare_tile.py   "prepare"  (Phase 1)
-                              ├─ dtm.py       0.5 m terrain raster
-                              ├─ recover.py   roof points, geometrically
-                              ├─ footprints.py  offset measure + buffer sweep
-                              ├─ diagnose.py  per-footprint failure catalogue
-                              └─ tiling.py    core / buffered extents, ownership
-                                       │
-                                       ├─► <tile>_prepared.las     (roof = class 6)
-                                       ├─► <tile>_roofprints.gpkg  (buffered)
-                                       └─► <tile>_dtm.tif
-                                       ▼
-                            src/pipeline/run_roofer.py     "roofer"   (Phase 2)
-                              writes a TOML, runs roofer as a subprocess
-                                       │
-                                       └─► out/roofer/<tile>/*.city.jsonl   ← deliverable
-                                       ▼
-                            src/pipeline/inspect_cityjson.py  "inspect" (Phase 3)
+Lantmäteriet Byggnad GPKG ─┐
+  (national, EPSG:3006)    │  footprint_extraction/      python main.py footprints
+                           └─► buildings_processed_postprocess.gpkg
+                                      │
+LAS tile (EPSG:3008) ─────────────────┤
+                                      ▼
+                           roofprint_preparation/      python main.py prepare   (Phase 1)
+                             ├─► <tile>_prepared.las     roof points relabelled to class 6
+                             ├─► <tile>_roofprints.gpkg  footprints buffered to the roof edge
+                             └─► <tile>_dtm.tif
+                                      ▼
+                           roof_reconstruction/        python main.py roofer    (Phase 2)
+                             └─► out/roofer/<tile>/*.city.jsonl   CityJSON 2.0 sequence
+                                      ▼
+                           model_inspection/           python main.py inspect   (Phase 3)
 ```
 
-Every stage writes into a `TileQA` record (`qa_record.py`): counts in, counts out,
-metrics, and named failures. One `out/qa/<tile>_qa.md` and `.json` per tile.
+`pipeline_common/` (config loader, QA record) is used by all of them, and
+`run_pipeline/` is the command line that drives them.
+
+Every stage writes into a `TileQA` record: counts in, counts out, metrics, and named
+failures. One `out/qa/<tile>_qa.md` and `.json` per tile.
 
 ---
 
@@ -47,39 +44,53 @@ metrics, and named failures. One `out/qa/<tile>_qa.md` and `.json` per tile.
 
 | File | Role |
 |---|---|
-| `main.py` | Root shim: puts `src/` on `sys.path`, then calls `pipeline.cli`. Lets a clone run with nothing installed. |
-| `src/pipeline/cli.py` | Every subcommand. Dispatches to each stage's own `main(argv)`; adds nothing but the `all` chain. Also the `helsingborg-lod22` console script. |
+| `main.py` | Root shim: puts `src/` on `sys.path`, then calls `run_pipeline.cli`. Lets a clone run with nothing installed. |
+| `run_pipeline/cli.py` | Every subcommand. Dispatches to each stage's own `main(argv)`; adds nothing but the `all` chain. Also the `helsingborg-lod22` console script. |
 
-Each stage module also keeps its own CLI (`python -m pipeline.prepare_tile --tile X`,
+Each driver also keeps its own CLI (`python -m roofprint_preparation.prepare_tile --tile X`,
 with `src/` on `PYTHONPATH`), and `cli.py` calls those rather than duplicating them.
 Adding a stage means adding a subparser plus one line in `cli.main()`.
 
-### Core pipeline (`src/pipeline/`)
+### `pipeline_common/` — shared
 
 | File | Role |
 |---|---|
 | `config.py` | Loads `config.yml`, resolves every path against **the config file's own directory**. This is why commands work from any working directory. `Config.path()` is the single funnel — nothing builds paths by hand. |
-| `io.py` | Reads LAS into float64 real-world coordinates (`PointCloud`), and footprints into a reprojected, exploded, validity-repaired GeoDataFrame. Assigns `bid`, the stable per-polygon id used end to end. |
-| `dtm.py` | 1.1 — rasterises ground returns to a 0.5 m DTM, median per cell, gaps filled by exact nearest valid cell. |
-| `recover.py` | 1.2 — the class-12 recovery. Selects roof candidates by height above the DTM, then filters vegetation by local surface variation (PCA over k neighbours). |
-| `footprints.py` | 1.3 — measures the footprint→roofprint offset from the data and sweeps candidate buffers, scoring each by capture rate and annulus purity. |
-| `diagnose.py` | 1.4 — resolves "footprint with no points" into a named cause. Not a debug script despite the name; it is a QA stage. |
-| `tiling.py` | 1.5 — core vs buffered extents, and centroid-based ownership so a building straddling an edge is reconstructed once. |
 | `qa_record.py` | The QA record itself: `TileQA` → `StageRecord`, written as JSON and Markdown. |
-| `prepare_tile.py` | Phase 1 driver. Chains the above and writes the three prepared inputs. |
-| `run_roofer.py` | Phase 2 driver. Builds the roofer TOML, runs roofer, logs it, records the result. |
-| `inspect_cityjson.py` | Phase 3 driver. LoDs, semantic surfaces, roof forms, volume and height stats. |
-| `cli.py` | Every subcommand; see above. |
-| `fix_cityjson.py` | Standalone utility, not a stage. Strips bare `NaN` (which is not legal JSON) so strict viewers accept a file. |
 
-### Footprints (`src/pipeline/buildings/`)
+### `footprint_extraction/` — cadastral footprints
 
 | File | Role |
 |---|---|
 | `base.py` | Abstract `load → validate → preprocess → export` template. `run()` returns a summary dict rather than raising. |
-| `pipeline.py` | The Byggnad implementation, plus the value translators (`translate_purpose`, `purpose_category`, `translate_collection_level`). |
-| `postprocess.py` | Collapses the version history to the newest row per `object_id`. Called from `export()`. |
-| `translations.py` | Swedish → English lookup tables. Constants only — the YAML loader is `src/pipeline/config.py`. |
+| `byggnad_pipeline.py` | The Byggnad implementation, plus the value translators (`translate_purpose`, `purpose_category`, `translate_collection_level`). |
+| `dedup_snapshot.py` | Collapses the version history to the newest row per `object_id`. Called from `export()`. |
+| `translations.py` | Swedish → English lookup tables. Constants only. |
+
+### `roofprint_preparation/` — Phase 1
+
+| File | Role |
+|---|---|
+| `readers.py` | Reads LAS into float64 real-world coordinates (`PointCloud`), and footprints into a reprojected, exploded, validity-repaired GeoDataFrame. Assigns `bid`, the stable per-polygon id used end to end. |
+| `dtm.py` | 1.1 — rasterises ground returns to a 0.5 m DTM, median per cell, gaps filled by exact nearest valid cell. |
+| `overlap_recovery.py` | 1.2 — the class-12 recovery. Selects roof candidates by height above the DTM, then filters vegetation by local surface variation (PCA over k neighbours). |
+| `roofprint_offset.py` | 1.3 — measures the footprint→roofprint offset from the data and sweeps candidate buffers, scoring each by capture rate and annulus purity. |
+| `footprint_diagnosis.py` | 1.4 — resolves "footprint with no points" into a named cause. |
+| `tiling.py` | 1.5 — core vs buffered extents, and centroid-based ownership so a building straddling an edge is reconstructed once. |
+| `prepare_tile.py` | The Phase 1 driver. Chains the above and writes the three prepared inputs. |
+
+### `roof_reconstruction/` — Phase 2
+
+| File | Role |
+|---|---|
+| `run_roofer.py` | Builds the roofer TOML, runs roofer, logs it, records the result. |
+
+### `model_inspection/` — Phase 3
+
+| File | Role |
+|---|---|
+| `inspect_cityjson.py` | LoDs, semantic surfaces, roof forms, volume and height stats. |
+| `repair_cityjson.py` | Standalone utility, not a stage. Strips bare `NaN` (which is not legal JSON) so strict viewers accept a file. |
 
 ---
 
@@ -97,7 +108,7 @@ Adding a stage means adding a subparser plus one line in `cli.main()`.
   alternative, it says why — that reasoning is the expensive part and it is kept in
   the code rather than in a separate document.
 - British spelling, and an SPDX + author header above (never inside) the module
-  docstring — `fix_cityjson` passes `__doc__` straight to argparse.
+  docstring — `repair_cityjson` passes `__doc__` straight to argparse.
 
 ---
 
@@ -141,7 +152,7 @@ Both established from roofer's source and `--help-all`, not from its example con
 
 ## Failure reasons
 
-`diagnose.py` resolves an empty footprint into one of these, reported per building in
+`footprint_diagnosis.py` resolves an empty footprint into one of these, reported per building in
 `out/qa/<tile>_per_building.csv`:
 
 | Reason | Meaning | What to do |

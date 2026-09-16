@@ -31,7 +31,7 @@ import numpy as np
 import shapely
 
 from .dtm import DTM
-from .qa_record import StageRecord
+from pipeline_common.qa_record import StageRecord
 
 
 def diagnose_footprints(

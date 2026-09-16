@@ -1,5 +1,5 @@
 # LOD2.2 Building Reconstruction — Helsingborg
-# Config-driven pipeline. No hardcoded paths anywhere in src/pipeline/.
+# Config-driven pipeline. No hardcoded paths anywhere in src/.
 # All distances in metres, all coordinates EPSG:3008 (SWEREF99 13 30).
 
 project:

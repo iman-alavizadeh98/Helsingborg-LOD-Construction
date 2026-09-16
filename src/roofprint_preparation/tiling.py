@@ -25,7 +25,7 @@ import numpy as np
 import shapely
 from shapely.geometry import Polygon
 
-from .qa_record import StageRecord
+from pipeline_common.qa_record import StageRecord
 
 Bounds = tuple[float, float, float, float]
 

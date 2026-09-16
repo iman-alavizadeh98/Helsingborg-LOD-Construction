@@ -6,7 +6,7 @@
 
 """Inspect roofer's CityJSON output — Phase 2 acceptance evidence.
 
-    python -m pipeline.inspect_cityjson --tile 6204_105
+    python main.py inspect --tile 6204_105
 
 Reports what actually came out: how many buildings, which LoDs, whether the
 semantic surfaces LOD2.2 requires (RoofSurface / WallSurface / GroundSurface)
@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import load_config
+from pipeline_common.config import load_config
 
 
 def _vertices(doc: dict, transform: dict | None) -> np.ndarray:
@@ -186,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     if not files:
-        print("no CityJSON output found — run 'python -m pipeline.run_roofer' first")
+        print("no CityJSON output found — run 'python main.py roofer' first")
         return 1
 
     for path in files:

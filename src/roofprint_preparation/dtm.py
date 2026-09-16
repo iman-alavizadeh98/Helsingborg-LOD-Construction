@@ -25,7 +25,7 @@ import rasterio
 from rasterio.transform import from_origin
 from scipy import ndimage
 
-from .qa_record import StageRecord
+from pipeline_common.qa_record import StageRecord
 
 NODATA = -9999.0
 

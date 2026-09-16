@@ -12,8 +12,10 @@ other strict parser) aborts on the whole file.
 
 Usage::
 
-    python -m pipeline.fix_cityjson out/roofer/6204_105/*.city.jsonl
-    python -m pipeline.fix_cityjson out/roofer/6204_105/*.city.jsonl --set-lod 2.2
+    python -m model_inspection.repair_cityjson out/roofer/6204_105/*.city.jsonl
+    python -m model_inspection.repair_cityjson out/roofer/6204_105/*.city.jsonl --set-lod 2.2
+
+(with ``src/`` on ``PYTHONPATH``, or after ``pip install -e .``)
 
 Writes ``<name>.fixed.city.json`` next to the input unless ``-o`` is given.
 

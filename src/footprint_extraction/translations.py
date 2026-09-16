@@ -15,7 +15,7 @@ Contains:
 - Dataset metadata
 
 Constants only — no I/O, no configuration loading. The project's YAML config
-loader is ``pipeline/config.py``; this module was once also called ``config.py``
+loader is ``pipeline_common/config.py``; this module was once also called ``config.py``
 and the collision was a standing source of confusion.
 
 All keys are the *raw Swedish values as they appear in the source GeoPackage*.

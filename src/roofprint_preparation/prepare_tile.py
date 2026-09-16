@@ -6,7 +6,7 @@
 
 """Phase 1 driver — prepare one tile for reconstruction.
 
-    python -m pipeline.prepare_tile --tile 6204_105
+    python main.py prepare --tile 6204_105
 
 Runs 1.1 through 1.5 and writes, into ``out/work/<tile>/``:
 
@@ -33,13 +33,13 @@ import numpy as np
 import pyproj
 from shapely.geometry import Polygon
 
-from .config import Config, load_config
-from .diagnose import diagnose_footprints
+from pipeline_common.config import Config, load_config
+from .footprint_diagnosis import diagnose_footprints
 from .dtm import build_dtm
-from .footprints import measure_offset, recommend_buffer, sweep_buffer
-from .io import clip_footprints, read_footprints, read_las
-from .qa_record import TileQA
-from .recover import recover_roof_points
+from .roofprint_offset import measure_offset, recommend_buffer, sweep_buffer
+from .readers import clip_footprints, read_footprints, read_las
+from pipeline_common.qa_record import TileQA
+from .overlap_recovery import recover_roof_points
 from .tiling import assign_footprints, tile_for_extent
 
 

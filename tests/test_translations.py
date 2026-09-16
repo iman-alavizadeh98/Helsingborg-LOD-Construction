@@ -29,7 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from pipeline.buildings.pipeline import (  # noqa: E402
+from footprint_extraction.byggnad_pipeline import (  # noqa: E402
     purpose_category,
     split_purpose,
     translate_collection_level,

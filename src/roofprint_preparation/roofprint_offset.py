@@ -31,7 +31,7 @@ import numpy as np
 import shapely
 from shapely.strtree import STRtree
 
-from .qa_record import StageRecord
+from pipeline_common.qa_record import StageRecord
 
 
 def _point_geoms(x: np.ndarray, y: np.ndarray):

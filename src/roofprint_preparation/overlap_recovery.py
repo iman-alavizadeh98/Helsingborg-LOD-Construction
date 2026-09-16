@@ -21,7 +21,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from .dtm import DTM
-from .qa_record import StageRecord
+from pipeline_common.qa_record import StageRecord
 
 
 def surface_variation(

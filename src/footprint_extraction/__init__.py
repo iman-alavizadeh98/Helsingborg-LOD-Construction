@@ -5,9 +5,9 @@
 # Developed with AI-assisted (agentic) programming; reviewed by the author.
 
 """
-Buildings footprint pipeline — cadastral attributes, Swedish → English.
+Footprint extraction — cadastral building footprints, Swedish → English.
 
-Produces the footprint layer the reconstruction pipeline consumes: it reads
+Produces the footprint layer ``roofprint_preparation`` consumes: it reads
 Lantmäteriet's national *Byggnad* vector GeoPackage, translates the coded Swedish
 attributes, collapses the version history to one row per building, and writes
 ``buildings_processed_postprocess.gpkg`` (layer ``buildings_postprocess``) — the
@@ -15,14 +15,14 @@ file ``config.yml`` names as ``paths.footprints``.
 
 Run it with ``python main.py footprints``.
 
-* ``base``         — abstract load/validate/preprocess/export template
-* ``pipeline``     — the Byggnad implementation and the value translators
-* ``postprocess``  — newest-row-per-object_id snapshot and its report
-* ``translations`` — the Swedish → English lookup tables (constants only)
+* ``base``             — abstract load/validate/preprocess/export template
+* ``byggnad_pipeline`` — the Byggnad implementation and the value translators
+* ``dedup_snapshot``   — newest-row-per-object_id snapshot and its report
+* ``translations``     — the Swedish → English lookup tables (constants only)
 """
 
 from .base import BasePipeline
-from .pipeline import BuildingsPipeline
-from .postprocess import build_postprocess_snapshot
+from .byggnad_pipeline import BuildingsPipeline
+from .dedup_snapshot import build_postprocess_snapshot
 
 __all__ = ["BasePipeline", "BuildingsPipeline", "build_postprocess_snapshot"]
