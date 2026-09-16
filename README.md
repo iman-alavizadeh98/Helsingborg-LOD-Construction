@@ -125,6 +125,28 @@ Point `config.yml` at them and list your tiles under `tiles:`.
 
 ## Run
 
+### With the window (no terminal needed)
+
+On Windows, double-click **`Start GUI.bat`**. On any platform, `python main.py gui`
+opens the same window.
+
+1. **Setup checks** at the top turn green when everything is in place: Python
+   packages, Docker, the roofer and citygml-tools images, and the input files. A red
+   cross says what to do, and **Download missing Docker images** fetches anything
+   that is not there yet.
+2. Choose the **tile** and tick the **export formats** you want.
+3. Press **Run everything**, or run one step at a time (Prepare, Reconstruct,
+   Export, Inspect). Progress streams into the log; **Stop** cancels.
+4. When it finishes, **Open QA report** shows the results in your browser, and
+   **Open 3D models folder** opens the exported files.
+
+The **Refresh footprints** tab rebuilds the cadastral footprints from a new
+Lantmäteriet Byggnad GeoPackage; it is only needed when those change.
+
+The window runs exactly the commands below, so results are identical either way.
+
+### From a terminal
+
 Everything goes through `main.py`. Paths inside `config.yml` resolve against its own
 directory, so these work from anywhere.
 
@@ -140,6 +162,7 @@ python main.py inspect --tile 6204_105   # LoDs, roof forms, volume/height stats
 
 # choose formats for one run (default: export.formats in config.yml)
 python main.py export --tile 6204_105 --format gltf ply
+python main.py all    --tile 6204_105 --format cityjson gltf
 
 # omit --tile to process every tile in config.yml
 # add --dry-run to the roofer stage to see the command and TOML without running
@@ -224,6 +247,8 @@ Every stage writes a QA record — counts in, counts out, failures with reasons.
 
 ```
 main.py                      # run from a clone: puts src/ on the path, calls run_pipeline.cli
+Start GUI.bat                # Windows: double-click to open the window
+gui.pyw                      # opens the window on any platform
 config.yml                   # all paths and parameters; no hardcoded paths in the code
 pyproject.toml               # optional `pip install -e .`, gives the helsingborg-lod22 command
 requirements.txt             # pinned, verified dependency set
@@ -235,7 +260,7 @@ src/
   model_export/              # CityJSON, CityGML, glTF, PLY
   model_inspection/          # Phase 3: inspect and repair CityJSON
   pipeline_common/           # shared config loader and QA records
-  run_pipeline/              # the command line (every subcommand)
+  run_pipeline/              # the command line (every subcommand) and the window
 
 tests/               # regression tests, no runner required
 docs/                # code guide, QA harness notes, project background

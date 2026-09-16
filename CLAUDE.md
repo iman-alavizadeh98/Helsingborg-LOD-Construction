@@ -37,6 +37,7 @@ Full specification: @docs/PROJECT_PLAN.md — read it before starting new work.
 
 ```
 main.py                     # entry point from a clone; commands live in run_pipeline.cli
+Start GUI.bat, gui.pyw      # the window (run_pipeline/gui.py), for non-terminal users
 src/
   footprint_extraction/     # Byggnad GPKG -> cadastral footprints (Swedish -> English)
   roofprint_preparation/    # Phase 1: DTM, class-12 recovery, roofprint buffer, tiling
@@ -44,7 +45,7 @@ src/
   model_export/             # CityJSON, CityGML (citygml-tools), glTF, PLY
   model_inspection/         # Phase 3: inspect / repair CityJSON
   pipeline_common/          # config loader, QA records
-  run_pipeline/             # the CLI
+  run_pipeline/             # the CLI and the Tkinter GUI
 tests/         # regression tests
 docs/          # code guide, QA harness notes, project background
 data/          # LAS tiles, footprint GPKG (gitignored)
@@ -67,6 +68,9 @@ python main.py export  --tile 6204_105   # CityJSON, CityGML, glTF, PLY (--forma
 python main.py inspect --tile 6204_105   # LoDs, semantic surfaces, roof forms, stats
 
 # omit --tile to process every tile listed in config.yml
+
+# the same from a window: Start GUI.bat (Windows) or `python main.py gui`. The GUI
+# only launches these commands as child processes — never add pipeline logic to it.
 
 # regenerate the cadastral footprints from the raw national Byggnad extract.
 # Not part of `all`; the raw input is not in this repository.

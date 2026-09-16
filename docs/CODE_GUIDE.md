@@ -52,10 +52,13 @@ failures. One `out/qa/<tile>_qa.json`, `.md` and `.html` per tile.
 |---|---|
 | `main.py` | Root shim: puts `src/` on `sys.path`, then calls `run_pipeline.cli`. Lets a clone run with nothing installed. |
 | `run_pipeline/cli.py` | Every subcommand. Dispatches to each stage's own `main(argv)`; adds nothing but the `all` chain. Also the `helsingborg-lod22` console script. |
+| `run_pipeline/gui.py` | The Tkinter window. A front end only: each button runs the matching `main.py` command as a child process with the same interpreter and streams its output, so nothing is implemented twice. Adds setup checks (packages, Docker, images, input files) and buttons that open results. Opened by `Start GUI.bat`, `gui.pyw`, or `main.py gui`. |
+| `gui.pyw`, `Start GUI.bat` | Launchers. `gui.pyw` imports only the GUI module, whose imports are standard library, so the window opens — and reports what to install — even when the pipeline's packages are missing. The `.bat` uses the `py -3.12` launcher, and must keep CRLF line endings (enforced in `.gitattributes`). |
 
 Each driver also keeps its own CLI (`python -m roofprint_preparation.prepare_tile --tile X`,
 with `src/` on `PYTHONPATH`), and `cli.py` calls those rather than duplicating them.
-Adding a stage means adding a subparser plus one line in `cli.main()`.
+Adding a stage means adding a subparser plus one line in `cli.main()`, and a button
+in `gui.py` if it should be reachable from the window.
 
 ### `pipeline_common/` — shared
 

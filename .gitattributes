@@ -9,3 +9,6 @@
 *.gpkg  binary
 *.tif   binary
 *.png   binary
+
+# Windows batch files must keep CRLF: cmd.exe misparses them with LF endings.
+*.bat   text eol=crlf

@@ -11,6 +11,7 @@ run_pipeline.cli`` once ``src/`` is importable, or the ``helsingborg-lod22`` com
 after ``pip install -e .``. The examples below use the first.
 
     python main.py all --tile 6204_105      # the usual command
+    python main.py gui                      # the same, from a window
 
 Every stage is also runnable on its own, in the order below:
 
@@ -111,7 +112,10 @@ def run_all(args: argparse.Namespace) -> int:
             print(f"\n{label}: skipped (--dry-run)")
             continue
         print(f"\n{'=' * 70}\n{label}\n{'=' * 70}")
-        status = entry(_forward(args, dry_run=(name == "roofer")))
+        argv = _forward(args, dry_run=(name == "roofer"))
+        if name == "export" and args.formats:
+            argv += ["--format", *args.formats]
+        status = entry(argv)
         if status != 0:
             print(
                 f"\n{label} failed (exit {status}); stopping before the "
@@ -138,6 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_tile_args(p_all)
     p_all.add_argument("--dry-run", action="store_true",
                        help="for the roofer stage: write the TOML and print the command only")
+    p_all.add_argument("--format", nargs="+", dest="formats",
+                       choices=export_models.FORMATS,
+                       help="export formats; default: export.formats in config.yml")
 
     p_prepare = sub.add_parser("prepare", help="Phase 1: DTM, point recovery, roofprints")
     add_tile_args(p_prepare)
@@ -169,12 +176,19 @@ def build_parser() -> argparse.ArgumentParser:
                       help="output directory (default: data)")
     p_fp.add_argument("--no-postprocess", action="store_true",
                       help="skip the newest-row-per-building snapshot")
+
+    sub.add_parser("gui", help="open the graphical interface")
     return ap
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
+    if args.command == "gui":
+        # Imported only here: Tkinter is not needed by, and not loaded for, any
+        # terminal command.
+        from .gui import main as gui_main
+        return gui_main()
     if args.command == "all":
         return run_all(args)
     if args.command == "footprints":

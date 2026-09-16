@@ -45,6 +45,9 @@ Homepage = "https://github.com/3DBAG/roofer"
 [project.scripts]
 helsingborg-lod22 = "run_pipeline.cli:main"
 
+[project.gui-scripts]
+helsingborg-lod22-gui = "run_pipeline.gui:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
