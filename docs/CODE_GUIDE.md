@@ -156,6 +156,7 @@ Both established from roofer's source and `--help-all`, not from its example con
 ## Testing a change
 
 ```bash
+python tests/test_translations.py                  # attribute translation, no runner needed
 python main.py roofer --tile 6204_105 --dry-run   # inspect the TOML and command
 python main.py all --tile 6204_105                 # full run
 python main.py inspect --tile 6204_105             # compare the numbers
