@@ -157,7 +157,7 @@ def prepare_tile(cfg: Config, tile_id: str) -> dict:
     rec.finish()
 
     # -- outputs ------------------------------------------------------------
-    rec = qa.stage("2-outputs")
+    rec = qa.stage("1-outputs")
 
     ground_classes = list(cfg.section("dtm").get("ground_classes", [2]))
     ground_mask = np.isin(cloud.classification, ground_classes) & ~roof_mask

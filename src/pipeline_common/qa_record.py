@@ -132,14 +132,50 @@ class TileQA:
     # -- writing -----------------------------------------------------------
 
     def write(self) -> tuple[Path, Path]:
-        data = self.to_dict()
+        """Write the tile's report, merged with whatever earlier stages recorded.
+
+        Each phase runs as its own process and builds its own ``TileQA``, but they
+        all share one report per tile. Writing this run's stages on their own used
+        to replace the file wholesale, so running roofer erased every Phase 1
+        stage — the report ended up describing only the last command run. Now a
+        stage name that appears in this run replaces its earlier record, and every
+        other stage already on disk is kept, in its original order.
+        """
         json_path = self.qa_dir / f"{self.tile_id}_qa.json"
+        data = self._merge_with_existing(self.to_dict(), json_path)
         with open(json_path, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2)
         md_path = self.qa_dir / f"{self.tile_id}_qa.md"
         with open(md_path, "w", encoding="utf-8") as fh:
             fh.write(self._markdown(data))
         return json_path, md_path
+
+    @staticmethod
+    def _merge_with_existing(data: dict[str, Any], json_path: Path) -> dict[str, Any]:
+        """Fold this run's record into the one already on disk, if any."""
+        if not json_path.is_file():
+            return data
+        try:
+            with open(json_path, "r", encoding="utf-8") as fh:
+                previous = json.load(fh)
+        except (OSError, ValueError):
+            # An unreadable earlier record is not worth failing a run over; it is
+            # replaced, exactly as it would have been before merging existed.
+            return data
+
+        fresh = {s["stage"]: s for s in data["stages"]}
+        stages = [fresh.pop(s["stage"], s) for s in previous.get("stages", [])]
+        stages.extend(fresh.values())
+        # Keep the report in pipeline order whichever phase ran last. Stage names
+        # start with their phase ("0-load", "1.2-recover", "2-roofer", "3-export");
+        # the sort is stable, so stages within a phase keep their execution order.
+        stages.sort(key=_phase_of)
+
+        merged = dict(data)
+        merged["stages"] = stages
+        merged["started_utc"] = previous.get("started_utc", data["started_utc"])
+        merged["config"] = {**previous.get("config", {}), **data["config"]}
+        return merged
 
     def _markdown(self, data: dict[str, Any]) -> str:
         lines: list[str] = []
@@ -199,6 +235,12 @@ class TileQA:
                     add(f"- `{o}`")
                 add("")
         return "\n".join(lines) + "\n"
+
+
+def _phase_of(stage: dict[str, Any]) -> int:
+    """The phase number a stage name starts with; unnumbered stages sort last."""
+    head = str(stage.get("stage", "")).split("-", 1)[0].split(".", 1)[0]
+    return int(head) if head.isdigit() else 99
 
 
 def _fmt(v: Any) -> str:
