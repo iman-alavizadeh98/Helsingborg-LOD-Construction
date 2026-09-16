@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """1.1 Ground and DTM.
 
 Rasterise ground returns to a regular grid, then fill the holes left under

@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """Phase 2 driver — reconstruct one prepared tile with roofer.
 
     python -m pipeline.run_roofer --tile 6204_105

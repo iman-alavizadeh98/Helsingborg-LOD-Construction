@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """Inspect roofer's CityJSON output — Phase 2 acceptance evidence.
 
     python -m pipeline.inspect_cityjson --tile 6204_105

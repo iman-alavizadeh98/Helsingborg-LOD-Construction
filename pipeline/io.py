@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """Loading LAS point clouds and cadastral footprints.
 
 CRS hygiene (plan 1.4): coordinates are kept in real-world EPSG:3008 the whole
@@ -52,16 +58,6 @@ class PointCloud:
     def class_counts(self) -> dict[int, int]:
         codes, counts = np.unique(self.classification, return_counts=True)
         return {int(c): int(n) for c, n in zip(codes, counts)}
-
-    def subset(self, mask: np.ndarray) -> "PointCloud":
-        return PointCloud(
-            xyz=self.xyz[mask],
-            classification=self.classification[mask],
-            return_number=self.return_number[mask],
-            number_of_returns=self.number_of_returns[mask],
-            crs=self.crs,
-            source=self.source,
-        )
 
 
 def read_las(path: Path | str, expected_crs: str | None = None) -> PointCloud:

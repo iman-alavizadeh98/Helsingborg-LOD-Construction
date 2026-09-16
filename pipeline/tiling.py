@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """1.5 Tiling.
 
 Point cloud and footprints are tiled on one common grid. Each tile has a core
@@ -42,7 +48,13 @@ class TileSpec:
 
 
 def build_grid(extent: Bounds, cfg: dict) -> list[TileSpec]:
-    """Cover `extent` with tiles on a grid anchored to an absolute origin."""
+    """Cover `extent` with tiles on a grid anchored to an absolute origin.
+
+    Not called by the current single-tile flow — ``prepare_tile`` uses
+    :func:`tile_for_extent`, because each delivered LAS file is already a tile.
+    This is the multi-tile cutter for a study area supplied as one large cloud;
+    keep it, it is what Phase 4 (scale) builds on.
+    """
     size = float(cfg.get("size", 250.0))
     buffer = float(cfg.get("buffer", 20.0))
     origin = cfg.get("origin")
@@ -70,13 +82,6 @@ def build_grid(extent: Bounds, cfg: dict) -> list[TileSpec]:
                           x0 + size + buffer, y0 + size + buffer),
             ))
     return tiles
-
-
-def points_in_bounds(xy: np.ndarray, bounds: Bounds) -> np.ndarray:
-    """Boolean mask of points inside a bounding box (upper edge exclusive)."""
-    minx, miny, maxx, maxy = bounds
-    x, y = xy[:, 0], xy[:, 1]
-    return (x >= minx) & (x < maxx) & (y >= miny) & (y < maxy)
 
 
 def assign_footprints(

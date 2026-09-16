@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """Repair CityJSON / CityJSONSeq files that browsers refuse to parse.
 
 The main offender is the bare ``NaN`` token: Python's ``json`` module emits it
@@ -6,10 +12,14 @@ other strict parser) aborts on the whole file.
 
 Usage::
 
-    python -m pipeline.fix_cityjson data/colab/neighborhood.city.json
-    python -m pipeline.fix_cityjson data/colab/*.city.json* --set-lod 2.2
+    python -m pipeline.fix_cityjson out/roofer/6204_105/*.city.jsonl
+    python -m pipeline.fix_cityjson out/roofer/6204_105/*.city.jsonl --set-lod 2.2
 
 Writes ``<name>.fixed.city.json`` next to the input unless ``-o`` is given.
+
+This is a viewer aid, not a pipeline stage — roofer's own output parses fine.
+Reach for it when a file has been through a tool that emitted bare ``NaN``, or
+when a viewer insists on a particular LoD label.
 """
 
 from __future__ import annotations

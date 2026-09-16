@@ -1,3 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Iman Alavi Zadeh <iman.alavi98@gmail.com>
+#
+# Author: Iman Alavi Zadeh
+# Developed with AI-assisted (agentic) programming; reviewed by the author.
+
 """1.3 Measure the footprint/roofprint offset, and sweep the buffer.
 
 Cadastral polygons are ground footprints collected at the facade
@@ -31,30 +37,6 @@ from .qa_record import StageRecord
 def _point_geoms(x: np.ndarray, y: np.ndarray):
     return shapely.points(np.asarray(x, dtype=np.float64),
                           np.asarray(y, dtype=np.float64))
-
-
-def assign_points(
-    gdf: gpd.GeoDataFrame,
-    x: np.ndarray,
-    y: np.ndarray,
-    buffer: float = 0.0,
-) -> dict[int, np.ndarray]:
-    """Map each footprint's positional index to the indices of points inside it
-    (optionally after buffering the footprint outward)."""
-    geoms = gdf.geometry.values
-    if buffer > 0:
-        geoms = shapely.buffer(geoms, buffer, join_style="mitre")
-
-    pts = _point_geoms(x, y)
-    tree = STRtree(pts)
-    out: dict[int, np.ndarray] = {}
-    for i, geom in enumerate(geoms):
-        if geom is None or geom.is_empty:
-            out[i] = np.empty(0, dtype=np.int64)
-            continue
-        hits = tree.query(geom, predicate="intersects")
-        out[i] = np.sort(hits)
-    return out
 
 
 def measure_offset(
